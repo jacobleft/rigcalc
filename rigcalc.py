@@ -108,7 +108,8 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
         warn = "  ⚠ 超出线表上限，建议换PE或降低目标体重" if capped else ""
         out.append(f"主线: {mat} {main}号(破断{main_br}kg)  [{k_note} → T_req={fmt(T_req)}kg{env_note}]{warn}")
         sub_no = max(0.3, round(main * 0.6 * 10) / 10)
-        sub_note = " — 主线已最细，子线同号无冗余" if sub_no >= main else ""
+        lusu_note = "（路滑无前导：漂座以上为主线，牺牲环节=子线）" if mode == "lusu" else ""
+        sub_note = (" — 主线已最细，子线同号无冗余" if sub_no >= main else "") + lusu_note
         out.append(f"子线: {sub_no}号{sub_note}")
 
     # 钩

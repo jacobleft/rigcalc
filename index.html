@@ -506,9 +506,10 @@ function calc(){
     mainF = `${kNote} → T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → 选破断≥${fmt(T_need)}kg → ${mat==="nylon"?"尼龙":"PE"} ${p.no}号(${p.br}kg)` +
             (p.capped ? ` <span class="warn">⚠ 超出${mat==="nylon"?"尼龙":"PE"}线表上限，建议换${mat==="nylon"?"PE":"更粗线径"}或降低目标体重</span>` : "");
     const subNo = Math.max(0.3, Math.round(mainLine*0.6*10)/10);  // 子线 ≈ 主线的60%
+    const lusuNote = mode==="lusu" ? "（路滑无前导：漂座以上为主线，牺牲环节=子线）" : "";
     subLine = {no:subNo, note: subNo>=mainLine
-        ? `子线 ${subNo}号 — 主线已是最细档，子线同号（C6 边界），此时无「断子线保主线」冗余，钓线组需整体降级`
-        : `子线 ${subNo}号 ≈ 主线60% — 挂底断子线保主线`};
+        ? `子线 ${subNo}号 — 主线已是最细档，子线同号（C6 边界），此时无「断子线保主线」冗余，钓线组需整体降级${lusuNote}`
+        : `子线 ${subNo}号 ≈ 主线60% — 挂底断子线保主线${lusuNote}`};
   }
   // 主线材质：路亚分支写死 PE（代码内 pickLine("pe",...)），材质标签必须同步，不能读隐藏的 mat 下拉
   const mainMat = mode==="lure" ? "PE" : (mat==="nylon"?"尼龙":"PE");
