@@ -510,7 +510,9 @@ function calc(){
         ? `子线 ${subNo}号 — 主线已是最细档，子线同号（C6 边界），此时无「断子线保主线」冗余，钓线组需整体降级`
         : `子线 ${subNo}号 ≈ 主线60% — 挂底断子线保主线`};
   }
-  out.push({k:"主线", v:`${mainLine} 号`, s:mat==="nylon"?"尼龙":"PE", f:mainF});
+  // 主线材质：路亚分支写死 PE（代码内 pickLine("pe",...)），材质标签必须同步，不能读隐藏的 mat 下拉
+  const mainMat = mode==="lure" ? "PE" : (mat==="nylon"?"尼龙":"PE");
+  out.push({k:"主线", v:`${mainLine} 号`, s:mainMat, f:mainF});
   // C7/R7: 非路亚子线材质固定尼龙（台钓/路滑/海钓实战子线均为尼龙，即使主线选PE）
   const subMat = mode==="lure" ? "碳线" : "尼龙";
   out.push({k:mode==="lure"?"前导":"子线", v:`${subLine.no} 号`, s:subMat, f:subLine.note});
@@ -618,7 +620,7 @@ function calc(){
 
   // ---- 摘要 ----
   const sum = `【${f.name} ${W}kg · ${mode==="tai"?"台钓":mode==="lusu"?"路滑":mode==="lure"?"路亚":"海钓"} · 水深${depth}m · ${wind}级风】`+
-    `主线${mainLine}号${mat==="nylon"?"尼龙":"PE"} / ${mode==="lure"?"前导":"子线"}${subLine.no}号${subMat} · ${hook.v} · `+
+    `主线${mainLine}号${mainMat} / ${mode==="lure"?"前导":"子线"}${subLine.no}号${subMat} · ${hook.v} · `+
     (mode!=="lure" ? `铅${lead}g · ${floatV} · ` : "") + `${rodV} · ${reelV} · ${tuneV}`;
 
   $("out").innerHTML = out.map(o=>`
