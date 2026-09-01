@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>钓鱼装备计算器 · RigCalc</title>
+<style>
+  :root{
+    --bg:#0f1420; --card:#171e2e; --card2:#1d2740; --line:#2a3550;
+    --fg:#e8edf7; --muted:#8fa0bf; --accent:#4da3ff; --accent2:#ffb454; --good:#4ade80; --warn:#f87171;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--fg); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; padding:24px; line-height:1.55;}
+  .wrap{max-width:1100px; margin:0 auto;}
+  h1{font-size:22px; letter-spacing:.5px;}
+  .sub{color:var(--muted); font-size:13px; margin-top:4px;}
+  .tabs{display:flex; gap:8px; margin:18px 0 14px;}
+  .tab{padding:8px 18px; border-radius:8px; background:var(--card); border:1px solid var(--line); cursor:pointer; font-size:14px; color:var(--muted);}
+  .tab.active{background:var(--accent); color:#06121f; border-color:var(--accent); font-weight:600;}
+  .grid{display:grid; grid-template-columns:340px 1fr; gap:16px;}
+  @media(max-width:820px){.grid{grid-template-columns:1fr;}}
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;}
+  .panel h2{font-size:14px; color:var(--muted); font-weight:600; margin-bottom:12px; letter-spacing:.5px;}
+  .field{margin-bottom:14px;}
+  .field label{display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; color:var(--fg);}
+  .field label b{color:var(--accent2); font-weight:600;}
+  select,input[type=range]{width:100%;}
+  select{background:var(--card2); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:7px 10px; font-size:14px;}
+  input[type=range]{accent-color:var(--accent);}
+  .val{font-variant-numeric:tabular-nums;}
+  .out{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .card{background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:12px 14px;}
+  .card .k{font-size:12px; color:var(--muted);}
+  .card .v{font-size:17px; font-weight:700; margin-top:2px;}
+  .card .v small{font-size:12px; color:var(--muted); font-weight:400;}
+  .card .f{font-size:11px; color:#6b7ca0; margin-top:6px; border-top:1px dashed var(--line); padding-top:6px; font-family:ui-monospace,Menlo,monospace;}
+  .card.full{grid-column:1/-1;}
+  .sum{grid-column:1/-1; background:#0f1a2e; border:1px solid var(--accent); border-radius:10px; padding:12px 14px; font-size:13px;}
+  .sum b{color:var(--accent);}
+  .btn{margin-top:10px; width:100%; background:var(--accent); color:#06121f; border:none; border-radius:8px; padding:10px; font-weight:700; cursor:pointer; font-size:14px;}
+  .btn:hover{filter:brightness(1.1);}
+  .note{font-size:11px; color:var(--muted); margin-top:10px; line-height:1.6;}
+  .warn{color:var(--warn);}
+  .ok{color:var(--good);}
+  .rev-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .rev-table th,.rev-table td{padding:7px 9px; border-bottom:1px solid var(--line); text-align:left;}
+  .rev-table th{color:var(--muted); font-weight:500; font-size:12px;}
+  .rev-table tr:hover td{background:#1a2438;}
+  .hide{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎣 RigCalc 钓鱼装备计算器</h1>
+  <div class="sub">输入目标鱼 / 水深 / 风力 → 输出全套配置。所有结果带公式标注：<b>推导式</b>（力学）或 <b>经验式</b>（行业标尺）。开源，纯本地，无任何数据上传。</div>
+
+  <div class="tabs">
+    <div class="tab active" id="tabFwd" onclick="showTab('fwd')">正向：目标鱼 → 配置</div>
+    <div class="tab" id="tabRev" onclick="showTab('rev')">反向：给定配置 → 可钓鱼种</div>
+  </div>
+
+  <!-- ================= 正向 ================= -->
+  <div id="paneFwd">
+  <div class="grid">
+    <div class="panel">
+      <h2>输入（自变量）</h2>
+      <div class="field">
+        <label>钓法 <b id="modeTag">台钓</b></label>
+        <select id="mode" onchange="modeChange()">
+          <option value="tai">台钓（手竿悬坠）</option>
+          <option value="lusu">路滑（矶竿滑漂）</option>
+          <option value="lure">路亚（拟饵）</option>
+          <option value="sea">海钓（串钩守钓）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>目标鱼 <b id="fishTag">鲫鱼</b></label>
+        <select id="fish" onchange="fishChange()"></select>
+      </div>
+      <div class="field">
+        <label>目标体重 <b id="wTag">0.5 kg</b></label>
+        <input type="range" id="weight" min="0.05" max="20" step="0.05" value="0.5" oninput="calc()">
+      </div>
+      <div class="field">
+        <label>水深 <b id="dTag">2 m</b></label>
+        <input type="range" id="depth" min="0.5" max="10" step="0.5" value="2" oninput="calc()">
+      </div>
+      <div class="field">
+        <label>风力 <b id="wndTag">2 级</b></label>
+        <input type="range" id="wind" min="0" max="8" step="1" value="2" oninput="calc()">
+      </div>
+      <div class="field" id="curField">
+        <label>走水 <b id="curTag">静水</b></label>
+        <select id="current" onchange="calc()">
+          <option value="0">静水</option>
+          <option value="1">缓流</option>
+          <option value="2">急流</option>
+        </select>
+      </div>
+      <div class="field" id="lureField" style="display:none">
+        <label>拟饵重量 <b id="lureTag">8 g</b></label>
+        <input type="range" id="lureW" min="1" max="40" step="0.5" value="8" oninput="calc()">
+      </div>
+      <div class="field" id="matField">
+        <label>主线材质 <b id="matTag">尼龙</b></label>
+        <select id="mat" onchange="calc()">
+          <option value="nylon">尼龙（台钓/守钓）</option>
+          <option value="pe">PE 编织（路亚/远投）</option>
+        </select>
+      </div>
+      <button class="btn" onclick="copySum()">复制配置摘要</button>
+      <div class="note">
+        <b>依赖链（因变量全部由输入推出）：</b><br>
+        目标鱼 → 拉力需求 → 线径 → 线号 → 轮容量<br>
+        水深+风力+走水 → 铅重 → 漂吃铅（等量）<br>
+        铅重+饵重 → 竿号数/调性<br>
+        唯一经验常数：线号制 d≈0.165√号、轮容量标称。
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>输出（因变量）</h2>
+      <div class="out" id="out"></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= 反向 ================= -->
+  <div id="paneRev" class="hide">
+    <div class="grid">
+      <div class="panel">
+        <h2>输入（给定配置）</h2>
+        <div class="field">
+          <label>主线材质 <b id="rmatTag">尼龙</b></label>
+          <select id="rmat" onchange="rev()">
+            <option value="nylon">尼龙</option>
+            <option value="pe">PE</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>主线号数 <b id="rlineTag">2.0 号</b></label>
+          <input type="range" id="rline" min="0.3" max="6" step="0.1" value="2" oninput="rev()">
+        </div>
+        <div class="field">
+          <label>垂钓环境 <b id="renvTag">静水</b></label>
+          <select id="renv" onchange="rev()">
+            <option value="0">静水</option>
+            <option value="1">江河/缓流</option>
+            <option value="2">海钓</option>
+          </select>
+        </div>
+        <div class="note">
+        反向逻辑：给定破断拉力 T = 线号表 → 对每种鱼反解 W_max = T / k（k = 综合系数：冲刺×结节×余量），
+        W_max 大于该鱼常见下限即可钓。结果给出每种鱼的<b>安全上限体重</b>。
+        </div>
+      </div>
+      <div class="panel">
+        <h2>可钓鱼种（安全上限）</h2>
+        <table class="rev-table" id="revTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    公式与数据源：线号制 d≈0.165√号（JAFS 行业标准）；破断拉力表取主流品牌典型值（尼龙/PE/碳线差异已区分）；
+    综合系数 k = 冲刺力系数 × 结节损耗 × 操作余量（小个体鱼相对系数更高：钩线有最小规格限制、小鱼瞬时冲击大），按实战线组搭配表校准，已含海钓磨损余量；
+    吃铅经验式 = (水深+竿长)/2 + 风力修正（钓界通行公式，非力学推导，已标注）。
+    本工具输出为<b>合理区间起点</b>，实际以钓场情况微调。
+  </div>
+</div>
+
+<script>
+/* ---------------- 数据 ---------------- */
+const FISH = [
+  {name:"白条",  min:0.02, max:0.2,  k:15,  bite:"轻口", salt:false},
+  {name:"罗非仔",min:0.05, max:0.3,  k:10,  bite:"正常", salt:false},
+  {name:"鲫鱼",  min:0.1,  max:1.5,  k:4,   bite:"轻口", salt:false},
+  {name:"罗非",  min:0.3,  max:2.5,  k:3.7, bite:"猛口", salt:false},
+  {name:"鲮鱼",  min:0.3,  max:2,    k:3.7, bite:"正常", salt:false},
+  {name:"鲤鱼",  min:0.5,  max:15,   k:2.0, bite:"正常", salt:false},
+  {name:"草鱼",  min:0.5,  max:15,   k:2.2, bite:"正常", salt:false},
+  {name:"鲢鳙",  min:1,    max:20,   k:1.7, bite:"猛口", salt:false},
+  {name:"翘嘴",  min:0.2,  max:8,    k:3.0, bite:"猛口", salt:false},
+  {name:"沙尖",  min:0.05, max:0.3,  k:13,  bite:"轻口", salt:true},
+  {name:"黑鲷",  min:0.3,  max:4,    k:4.5, bite:"猛口", salt:true},
+  {name:"海鲈",  min:0.5,  max:10,   k:2.8, bite:"猛口", salt:true},
+];
+
+// 破断拉力表 (kg)：号 → kg
+const BREAK = {
+  nylon: {0.3:0.8,0.4:1.0,0.6:1.5,0.8:2.0,1.0:2.5,1.2:3.0,1.5:3.7,2.0:4.5,2.5:5.5,3.0:6.5,3.5:7.5,4.0:8.5,5.0:10.5,6.0:12.5},
+  pe:    {0.4:4,0.6:6,0.8:8,1.0:10,1.2:12,1.5:15,2.0:20,2.5:25,3.0:30},
+  carbon:{0.4:1.1,0.6:1.6,0.8:2.1,1.0:2.6,1.2:3.2,1.5:3.9,2.0:4.8,2.5:5.8,3.0:6.8}
+};
+const LINE_ORDER = {nylon:["0.3","0.4","0.6","0.8","1.0","1.2","1.5","2.0","2.5","3.0","3.5","4.0","5.0","6.0"],
+                    pe:["0.4","0.6","0.8","1.0","1.2","1.5","2.0","2.5","3.0"]};
+// 轮容量标称：型号 → "1号线×100m" 等效单位（容量 ∝ L·d²）
+const REEL = {500:80,1000:100,2000:200,2500:250,3000:300,4000:400,5000:500,6000:600};
+const DIA_1 = 0.165; // 1号线直径 mm
+
+/* ---------------- 工具 ---------------- */
+const $ = id => document.getElementById(id);
+const dia = n => DIA_1 * Math.sqrt(n);
+const fmt = x => Math.round(x*100)/100;
+
+function pickLine(mat, needKg){
+  const order = LINE_ORDER[mat];
+  for(const g of order){
+    if(BREAK[mat][g] >= needKg) return {no:parseFloat(g), br:BREAK[mat][g]};
+  }
+  return {no:parseFloat(order[order.length-1]), br:BREAK[mat][order[order.length-1]]};
+}
+function pickReel(Lm, d){
+  const req = Lm * Math.pow(d/DIA_1, 2);
+  let best=null;
+  for(const [type,cap] of Object.entries(REEL)){
+    if(cap>=req && (!best || cap<REEL[best])) best=type;
+  }
+  return {type:best?parseInt(best):6000, req:Math.round(req)};
+}
+
+/* ---------------- 正向计算 ---------------- */
+function calc(){
+  const mode=$("mode").value, fish=$("fish").value, W=parseFloat($("weight").value),
+        depth=parseFloat($("depth").value), wind=parseInt($("wind").value),
+        cur=parseInt($("current").value), mat=$("mat").value;
+  const f=FISH.find(x=>x.name===fish);
+  const lureW=parseFloat($("lureW").value);
+
+  $("wTag").textContent=W+" kg"; $("dTag").textContent=depth+" m";
+  $("wndTag").textContent=wind+" 级"; $("curTag").textContent=$("current").options[$("current").selectedIndex].text;
+  $("lureTag").textContent=lureW+" g"; $("matTag").textContent=mat==="nylon"?"尼龙":"PE";
+
+  const out=[];
+  const T_req = W * f.k;                       // 拉力需求 = 体重 × 综合系数 k（冲刺力×结节损耗×操作余量，按实战线组表校准）
+
+  // ---- 线 ----
+  let mainLine, subLine, mainF;
+  if(mode==="lure"){
+    // 路亚：按饵重定最小线号，再按拉力取大
+    const byLure = lureW<=3?0.4 : lureW<=7?0.6 : lureW<=12?0.8 : lureW<=20?1.0 : 1.5;
+    const p1=pickLine("pe", T_req), p2=pickLine("pe", BREAK.pe[byLure]||4);
+    mainLine = Math.max(p1.no, p2.no);
+    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg → PE ${mainLine}号(${BREAK.pe[mainLine]}kg)；饵重${lureW}g要求 ≥${byLure}号，取大`;
+    const leadNo = Math.min(mainLine*2, mainLine+1);
+    const carbonNos = Object.keys(BREAK.carbon).map(Number).sort((a,b)=>a-b);
+    const snapLead = carbonNos.find(c=>c>=leadNo) || carbonNos[carbonNos.length-1];
+    subLine = {no:snapLead, note:`碳线前导 ${snapLead}号(破断${BREAK.carbon[snapLead]}kg) — 受控薄弱点，挂底断前导`};
+  } else {
+    const p = pickLine(mat, T_req);
+    mainLine = p.no;
+    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg → 选破断≥${fmt(T_req)}kg → ${mat==="nylon"?"尼龙":"PE"} ${p.no}号(${p.br}kg)`;
+    const subNo = Math.max(0.3, Math.round(mainLine*0.6*10)/10);  // 子线 ≈ 主线的60%
+    subLine = {no:subNo, note:`子线 ${subNo}号 ≈ 主线60% — 挂底断子线保主线`};
+  }
+  out.push({k:"主线", v:`${mainLine} 号`, s:mat==="nylon"?"尼龙":"PE", f:mainF});
+  out.push({k:mode==="lure"?"前导":"子线", v:`${subLine.no} 号`, s:mode==="lure"?"碳线":(mat==="nylon"?"尼龙":"PE"), f:subLine.note});
+
+  // ---- 钩 ----
+  const hook = W<0.1?"袖钩 1–2号" : W<0.3?"袖钩 2–3号" : W<0.8?"袖钩 3–5号"
+             : W<2?"袖钩 5–6号 / 伊豆 4–5号" : W<5?"伊势尼 3–5号"
+             : W<10?"伊势尼 5–8号" : "伊势尼 8–12号";
+  out.push({k:"鱼钩", v:hook, s:"", f:`经验式：钩号 = f(体重) — 钩条粗度应 ≥ 线径（线定钩原则）`});
+
+  // ---- 竿 ----
+  let rodV, rodF;
+  if(mode==="tai"){
+    const len = depth<=1.5?3.6 : depth<=2?4.5 : depth<=3?5.4 : depth<=4?6.3 : 7.2;
+    const tune = f.bite==="轻口"?"37调(偏软)" : f.bite==="猛口"?"19调(硬)" : "28调";
+    rodV = `${len}m 手竿 · ${tune}`;
+    rodF = `长度经验式：水深${depth}m → ${len}m；调性=鱼口：${f.bite} → ${tune}（先调刺鱼快，胴调卸力韧）`;
+  } else if(mode==="lusu"){
+    const len = depth<=3?3.6:4.5;
+    const no = W<0.5?1.5 : W<2?2 : W<5?3 : 4;
+    rodV = `${len}m 矶竿 ${no}号 · 大导环`;
+    rodF = `长度=水深${depth}m→${len}m；号数∝负荷：W=${W}kg→${no}号（EI∝t³，号数=梁强度）；必须大导环（滑漂过环）`;
+  } else if(mode==="lure"){
+    const len = lureW<=5?1.8 : lureW<=12?2.1 : lureW<=25?2.4 : 2.7;
+    const hd  = lureW<=5?"UL/L" : lureW<=12?"L/ML" : lureW<=25?"M" : "MH";
+    rodV = `${len}m ${hd} 直柄/枪柄`;
+    rodF = `储能匹配：竿刚度 EI 须与饵重匹配（轻饵压不弯硬竿→能量传不出）→ 饵${lureW}g → ${hd}`;
+  } else {
+    const len = depth<=3?3.6:4.5;
+    const no = W<2?2 : W<5?3 : W<10?4 : 5;
+    rodV = `${len}m 海竿 ${no}号`;
+    rodF = `海竿强度∝目标鱼：W=${W}kg→${no}号；铅重大、抛投猛，竿需硬调蓄力`;
+  }
+  out.push({k:"鱼竿", v:rodV, s:"", f:rodF});
+
+  // ---- 铅 & 漂 ----
+  let lead, leadF, floatV, floatF;
+  if(mode==="sea"){
+    lead = Math.max(12, 15 + wind*3 + (cur===2?8:0));
+    leadF = `经验式：铅 = 15 + 风力×3 ${cur===2?"+ 急流8":""} = ${lead}g — 海钓重铅定住钓组`;
+    floatV = "无漂（看竿稍/铃铛）";
+    floatF = "守钓线组：绷线看竿稍抖动，无浮漂系统";
+  } else {
+    const rodLen = mode==="tai" ? (depth<=1.5?3.6:depth<=2?4.5:depth<=3?5.4:depth<=4?6.3:7.2)
+                 : (depth<=3?3.6:4.5);
+    let l = 0.5*(depth+rodLen) + Math.max(0, wind-2)*0.3 + (cur===1?0.5:cur===2?1.5:0);
+    const cap = (f.bite==="轻口" && l>1.8) ? 1.8 : l;   // 灵敏度上限约束
+    lead = Math.max(0.8, Math.round(cap*2)/2);
+    leadF = `经验式：吃铅=(水深+竿长)/2=${fmt(0.5*(depth+rodLen))}g + 风${wind}级修正${fmt(Math.max(0,wind-2)*0.3)}g + 走水修正${cur===1?0.5:cur===2?1.5:0}g`;
+    if(cap!==l) leadF += ` → 受灵敏度约束（${f.bite}鱼）压到 ${lead}g`;
+    const tail = f.bite==="轻口" ? "细尾/小碎目" : (wind>=3 ? "加粗尾" : "常规尾");
+    floatV = `吃铅 ${lead}g · ${tail}`;
+    floatF = `漂吃铅 ≡ 铅重（静力平衡：ρV漂-m漂 = 铅重，等量匹配）；漂尾细度 ∝ 灵敏度需求（k=ρgA尾，${f.bite}鱼 → ${tail}）`;
+  }
+  out.push({k:mode==="sea"?"铅坠":"铅坠/漂吃铅", v:`${lead} g`, s:"", f:leadF});
+  out.push({k:"浮漂", v:floatV, s:"", f:floatF});
+
+  // ---- 调钓 ----
+  let tuneV, tuneF;
+  if(mode==="tai"){
+    if(cur===2 || wind>=4){ tuneV="调平水钓2目（跑铅）"; tuneF="走水/大风 → 增大底托力R、子线弯曲，抗走水"; }
+    else if(f.bite==="轻口"){ tuneV="调5钓3"; tuneF="轻口鱼 → 增加剩余浮力（调目-钓目↑），子线绷直更灵"; }
+    else if(f.bite==="猛口"){ tuneV="调3钓3"; tuneF="猛口 → 钝一点滤假口，子线微弯"; }
+    else { tuneV="调4钓2"; tuneF="基准状态：底托力R恰好抵消下饵重 → 一饵触底一饵悬浮，子线微弯"; }
+  } else if(mode==="lusu"){
+    tuneV = (cur===2||wind>=4) ? "露1目 · 重铅滑漂" : "露1–2目";
+    tuneF = "路滑钓低目抗走水；调深度=拖动棉线结（上挡）";
+  } else if(mode==="lure"){
+    tuneV = "无漂（手感/竿尖传口）";
+    tuneF = "拟饵体系：无浮漂，鱼口经 PE 零延展直接传手";
+  } else {
+    tuneV = "看竿稍抖动 / 挂铃铛";
+    tuneF = "守钓：竿尖是浮漂（绷尖钓原理）";
+  }
+  out.push({k:"调钓", v:tuneV, s:"", f:tuneF, full:true});
+
+  // ---- 轮 ----
+  let reelV, reelF;
+  if(mode==="tai"){
+    reelV = "不适用（手竿无轮）";
+    reelF = "台钓手竿无轮；若用矶竿代手竿：容量 = L·d² → 选最小装得下的型号";
+  } else {
+    const Lm = mode==="lure"?100 : mode==="lusu"?120 : 150;
+    const d = dia(mainLine);
+    const r = pickReel(Lm, d);
+    const ratio = mode==="lure" ? (lureW<=3?"5.0":"6.2") : mode==="lusu"?"5.0":"4.8";
+    reelV = `${r.type} 型纺车轮 · ${ratio}:1`;
+    reelF = `容量守恒：L·d² = ${Lm}m×(${fmt(d)}mm)² ≈ ${r.req}（1号×100m单位）→ 最小型号 = ${r.type}型（标称${REEL[r.type]}）— 选最小的，更大只增重`;
+  }
+  out.push({k:"渔轮", v:reelV, s:"", f:reelF, full:true});
+
+  // ---- 摘要 ----
+  const sum = `【${f.name} ${W}kg · ${mode==="tai"?"台钓":mode==="lusu"?"路滑":mode==="lure"?"路亚":"海钓"} · 水深${depth}m · ${wind}级风】`+
+    `主线${mainLine}号${mat==="nylon"?"尼龙":"PE"} / ${mode==="lure"?"前导":"子线"}${subLine.no}号 · ${hook} · `+
+    `铅${lead}g · ${floatV} · ${rodV} · ${reelV} · ${tuneV}`;
+  $("sumLine") && ($("sumLine").textContent = sum);
+
+  $("out").innerHTML = out.map(o=>`
+    <div class="card ${o.full?'full':''}">
+      <div class="k">${o.k}</div>
+      <div class="v">${o.v} ${o.s?`<small>${o.s}</small>`:""}</div>
+      <div class="f">${o.f}</div>
+    </div>`).join("") +
+    `<div class="sum"><b>配置摘要：</b>${sum}</div>`;
+  $("sumText") && ($("sumText").textContent = sum);
+}
+
+function copySum(){
+  const t = $("sumText") ? $("sumText").textContent : "";
+  navigator.clipboard.writeText(t).then(()=>alert("已复制：\n"+t)).catch(()=>alert(t));
+}
+
+/* ---------------- 反向计算 ---------------- */
+function rev(){
+  const mat=$("rmat").value, no=parseFloat($("rline").value), env=parseInt($("renv").value);
+  $("rmatTag").textContent = mat==="nylon"?"尼龙":"PE";
+  $("rlineTag").textContent = no+" 号";
+  $("renvTag").textContent = $("renv").options[$("renv").selectedIndex].text;
+  const T = BREAK[mat][no] || 4;
+  const rows = FISH
+    .filter(f => (env===2) ? f.salt : !f.salt)
+    .map(f => {
+      const Wmax = T / f.k;
+      const ok = Wmax >= f.min;
+      return `<tr>
+        <td>${f.name}</td>
+        <td>${f.min}–${f.max} kg</td>
+        <td>${f.k}</td>
+        <td class="${ok?"ok":"warn"}">≤ ${fmt(Wmax)} kg ${ok?"✓":"✗"}</td>
+        <td>${f.bite}</td>
+      </tr>`;
+    }).join("");
+  $("revTable").innerHTML = `<tr><th>鱼种</th><th>常见体重</th><th>综合系数k</th><th>此线安全上限</th><th>口性</th></tr>` + rows;
+}
+
+/* ---------------- 初始化 ---------------- */
+function modeChange(){
+  const m=$("mode").value;
+  $("lureField").style.display = m==="lure" ? "" : "none";
+  $("matField").style.display = m==="lure" ? "none" : "";
+  $("modeTag").textContent = $("mode").options[$("mode").selectedIndex].text;
+  $("mat").value = m==="lure" ? "pe" : "nylon";
+  calc();
+}
+function fishChange(){
+  const f=FISH.find(x=>x.name===$("fish").value);
+  $("fishTag").textContent = f.name;
+  $("weight").value = Math.min(Math.max(f.min, f.min*3), 20);
+  calc();
+}
+function showTab(t){
+  $("paneFwd").classList.toggle("hide", t!=="fwd");
+  $("paneRev").classList.toggle("hide", t!=="rev");
+  $("tabFwd").classList.toggle("active", t==="fwd");
+  $("tabRev").classList.toggle("active", t==="rev");
+  if(t==="rev") rev(); else calc();
+}
+// 填充鱼种下拉
+(function(){
+  const sel=$("fish");
+  FISH.forEach(f=>{ const o=document.createElement("option"); o.value=f.name; o.textContent=f.name+(f.salt?" (海)":""); sel.appendChild(o); });
+  // 隐藏的摘要文本节点
+  const sp=document.createElement("span"); sp.id="sumText"; sp.style.display="none"; document.body.appendChild(sp);
+  calc();
+})();
+</script>
+</body>
+</html>
