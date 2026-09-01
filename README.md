@@ -28,11 +28,26 @@
 
 ## 使用
 
-直接用浏览器打开 `index.html`，或：
+**网页版**：直接用浏览器打开 `index.html`，或
 
 ```bash
 python3 -m http.server 8000
 # 浏览器访问 http://localhost:8000
+```
+
+**CLI 版**（零依赖，纯标准库）：
+
+```bash
+# 正向：目标鱼 → 配置
+python3 rigcalc.py 鲫鱼 0.5 --depth 2 --wind 2
+python3 rigcalc.py 翘嘴 1.0 --mode lure --lure 8
+python3 rigcalc.py 黑鲷 1.0 --mode sea --depth 3 --wind 3
+
+# 反向：线号 → 可钓鱼种
+python3 rigcalc.py --reverse --mat pe --line 1.0 --env 2
+
+# 全参数
+python3 rigcalc.py --help
 ```
 
 ## 反向模式
