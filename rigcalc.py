@@ -31,15 +31,18 @@ FISH = [
 BREAK = {
     "nylon": {0.3:0.8,0.4:1.0,0.6:1.5,0.8:2.0,1.0:2.5,1.2:3.0,1.5:3.7,2.0:4.5,2.5:5.5,3.0:6.5,3.5:7.5,4.0:8.5,5.0:10.5,6.0:12.5},
     "pe":    {0.4:4,0.6:6,0.8:8,1.0:10,1.2:12,1.5:15,2.0:20,2.5:25,3.0:30},
-    "carbon":{0.4:1.1,0.6:1.6,0.8:2.1,1.0:2.6,1.2:3.2,1.5:3.9,2.0:4.8,2.5:5.8,3.0:6.8},
+    "carbon":{0.4:1.1,0.6:1.6,0.8:2.1,1.0:2.6,1.2:3.2,1.5:3.9,2.0:4.8,2.5:5.8,3.0:6.8,3.5:7.8,4.0:8.9,5.0:11.0,6.0:13.1},
 }
 LINE_ORDER = {
     "nylon": [0.3,0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0,3.5,4.0,5.0,6.0],
     "pe":    [0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0],
+    "carbon":[0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0,3.5,4.0,5.0,6.0],
 }
 REEL = {500:80, 1000:100, 2000:200, 2500:250, 3000:300, 4000:400, 5000:500, 6000:600}
 DIA_1 = 0.165
-REV_ENV_FACTOR = [1.0, 0.85, 0.65]  # 静水/江河缓流/海钓
+# 环境折损（双向统一，正向与反向共用同一因子 → 往返自洽）：
+#   静水 1.0 / 走水·江河 0.85 / 海钓 0.65（磨线+冲击）
+REV_ENV_FACTOR = [1.0, 0.85, 0.65]
 
 MODES = {"tai": "台钓", "lusu": "路滑", "lure": "路亚", "sea": "海钓"}
 FISH_NAMES = [f["name"] for f in FISH]
@@ -71,22 +74,29 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
     f = next(x for x in FISH if x["name"] == fish_name)
     out = []
     T_req = W * f["k"]
+    # R3: 环境折损双向统一（正向 need = T_req / factor，与反向反解共用同一因子）
+    env_f = REV_ENV_FACTOR[2] if mode == "sea" else (REV_ENV_FACTOR[1] if cur >= 1 else REV_ENV_FACTOR[0])
+    T_need = T_req / env_f
+    env_note = "" if env_f == 1.0 else f" → 环境折损×{env_f:.2f} → 需求{fmt(T_need)}kg"
 
     # 线
     if mode == "lure":
         by_lure = 0.4 if lure_w <= 3 else 0.6 if lure_w <= 7 else 0.8 if lure_w <= 12 else 1.0 if lure_w <= 20 else 1.5
-        p1, _, c1 = pick_line("pe", T_req)
-        p2, _, c2 = pick_line("pe", BREAK["pe"][by_lure])
+        p1, br1, c1 = pick_line("pe", T_need)
+        p2, br2, c2 = pick_line("pe", BREAK["pe"][by_lure])
         main = max(p1, p2)
-        carbon_nos = sorted(BREAK["carbon"].keys())
-        lead_no = min(main * 2, main + 1)
-        snap = next((c for c in carbon_nos if c >= lead_no), carbon_nos[-1])
-        out.append(f"主线: PE {main}号(破断{BREAK['pe'][main]}kg)  前导: 碳线 {snap}号(破断{BREAK['carbon'][snap]}kg)")
+        warn = "  ⚠ 超出PE线表上限，建议降低目标体重或换更粗线径" if (c1 or c2) else ""
+        # R2: 前导由 T_req 反查碳线表（不再按主线号数换算），保证系统强度≈前导强度
+        lp, lbr, lcapped = pick_line("carbon", T_need)
+        sys_str = min(BREAK["pe"][main], lbr)
+        lwarn = "  ⚠ 超出碳线表上限，大物需加粗前导" if lcapped else ""
+        out.append(f"主线: PE {main}号(破断{BREAK['pe'][main]}kg)  前导: 碳线 {lp}号(破断{lbr}kg){lwarn}")
+        out.append(f"系统强度: min(主线{BREAK['pe'][main]}kg, 前导{lbr}kg) = {sys_str}kg  [T_req={fmt(T_req)}kg{env_note}]{warn}")
     else:
-        p, br, capped = pick_line(mat, T_req)
+        p, br, capped = pick_line(mat, T_need)
         main = p
         warn = "  ⚠ 超出线表上限，建议换PE或降低目标体重" if capped else ""
-        out.append(f"主线: {mat} {p}号(破断{br}kg)  [T_req={fmt(T_req)}kg]{warn}")
+        out.append(f"主线: {mat} {p}号(破断{br}kg)  [T_req={fmt(T_req)}kg{env_note}]{warn}")
         sub_no = max(0.3, round(main * 0.6 * 10) / 10)
         sub_note = " — 主线已最细，子线同号无冗余" if sub_no >= main else ""
         out.append(f"子线: {sub_no}号{sub_note}")
@@ -167,8 +177,9 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
 # ---------------- 反向 ----------------
 def calc_reverse(mat, line_no, env):
     keys = sorted(BREAK[mat].keys())
-    # 找最接近 line_no 的表内键（向下取整到最近键）
-    no = min(keys, key=lambda k: abs(k - line_no))
+    # R4: 向下取整到最近表内键（向上取整会高估线强，安全方向错误）
+    cands = [k for k in keys if k <= line_no]
+    no = max(cands) if cands else keys[0]
     T = BREAK[mat][no] * REV_ENV_FACTOR[env]
     rows = []
     for f in FISH:
@@ -193,7 +204,11 @@ def main():
     ap.add_argument("--reverse", action="store_true", help="反向模式: 给定线号→可钓鱼种")
     ap.add_argument("--line", type=float, default=1.5, help="反向: 主线号数")
     ap.add_argument("--env", type=int, choices=[0,1,2], default=0, help="反向: 0静水 1江河 2海钓")
+    ap.add_argument("--selftest", action="store_true", help="往返一致性自测（正向选线→反向反解应能覆盖原体重）")
     args = ap.parse_args()
+
+    if args.selftest:
+        sys.exit(selftest())
 
     if args.reverse:
         no, T, rows = calc_reverse(args.mat, args.line, args.env)
@@ -210,10 +225,57 @@ def main():
     if args.fish not in FISH_NAMES:
         print(f"未知鱼种: {args.fish}。可选: {', '.join(FISH_NAMES)}", file=sys.stderr)
         sys.exit(1)
+    # R5: CLI 与 web 对齐 — 海钓模式只接受海水鱼，反之亦然
+    f = next(x for x in FISH if x["name"] == args.fish)
+    if args.mode == "sea" and not f["salt"]:
+        print(f"错误: {args.fish} 是淡水鱼，不能用海钓模式（请选海水鱼种）", file=sys.stderr)
+        sys.exit(1)
+    if args.mode != "sea" and f["salt"]:
+        print(f"错误: {args.fish} 是海水鱼，请用 --mode sea（或选淡水鱼种）", file=sys.stderr)
+        sys.exit(1)
 
     print(f"【{args.fish} {args.weight}kg · {MODES[args.mode]} · 水深{args.depth}m · {args.wind}级风】")
     for line in calc_forward(args.fish, args.weight, args.depth, args.wind, args.cur, args.mode, args.mat, args.lure):
         print("  " + line)
+
+# ---------------- 自测：正向↔反向往返一致性 ----------------
+def selftest():
+    """对每条鱼×每个环境: 正向选出的主线号，反向反解的安全上限应 ≥ 输入体重。
+    抓 R3 类「正反矛盾」回归。"""
+    fails = []
+    n = 0
+    for f in FISH:
+        for env in (0, 1, 2):
+            if (env == 2) != f["salt"]:
+                continue
+            for mode in (["sea"] if env == 2 else ["tai", "lusu", "lure"]):
+                W = max(f["min"], round(f["min"] * 3, 2))
+                # 正向：选线（用该模式对应的材质与折损）
+                cur = 0 if env == 0 else 1 if env == 1 else 2
+                T_req = W * f["k"]
+                env_f = REV_ENV_FACTOR[env]
+                T_need = T_req / env_f
+                mat = "pe" if mode == "lure" else "nylon"
+                if mode == "lure":
+                    by_lure = 0.4 if W <= 0.3 else 0.6 if W <= 1 else 0.8
+                    p1, _, _ = pick_line("pe", T_need)
+                    p2, _, _ = pick_line("pe", BREAK["pe"][by_lure])
+                    line_no = max(p1, p2)
+                    line_br = BREAK["pe"][line_no]
+                else:
+                    line_no, line_br, _ = pick_line(mat, T_need)
+                # 反向：同一线号同一环境反解
+                wmax = (line_br * REV_ENV_FACTOR[env]) / f["k"]
+                n += 1
+                if wmax + 1e-9 < W:
+                    fails.append(f"{f['name']} {mode} env={env}: 正向选{line_no}号(破断{line_br}kg)，反向上限{wmax:.2f}kg < 体重{W}kg")
+    if fails:
+        print(f"SELFTEST FAIL ({len(fails)}/{n}):")
+        for x in fails:
+            print("  " + x)
+        return 1
+    print(f"SELFTEST PASS ({n} 组 正向↔反向 全部自洽)")
+    return 0
 
 if __name__ == "__main__":
     main()

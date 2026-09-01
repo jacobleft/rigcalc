@@ -164,7 +164,8 @@
   <div class="note" style="margin-top:18px">
     公式与数据源：线号制 d≈0.165√号（JAFS 行业标准）；破断拉力表取主流品牌典型值（尼龙/PE/碳线差异已区分），
     尼龙表较 JAFS 参考强力偏高 15–39%（取品牌宣传值），实战请留余量；
-    综合系数 k 为<b>经验比值拟合</b>（按实战线组搭配表回归：k = 破断需求/体重，小个体鱼因钩线最小规格与瞬时冲击而比值更高），已含海钓磨损余量；
+    综合系数 k 为<b>经验比值拟合</b>（按实战线组表回归：k = 破断需求/体重，小个体鱼因钩线最小规格与瞬时冲击而比值更高）；
+    环境折损（静水 1.0 / 走水·江河 0.85 / 海钓 0.65）为磨线与冲击折减，正向反向共用同一因子；
     吃铅经验式 = (水深+竿长)/2 + 风力修正（钓界通行公式，非力学推导，已标注）。
     本工具输出为<b>合理区间起点</b>，实际以钓场情况微调。
   </div>
@@ -191,13 +192,17 @@ const FISH = [
 const BREAK = {
   nylon: {0.3:0.8,0.4:1.0,0.6:1.5,0.8:2.0,1.0:2.5,1.2:3.0,1.5:3.7,2.0:4.5,2.5:5.5,3.0:6.5,3.5:7.5,4.0:8.5,5.0:10.5,6.0:12.5},
   pe:    {0.4:4,0.6:6,0.8:8,1.0:10,1.2:12,1.5:15,2.0:20,2.5:25,3.0:30},
-  carbon:{0.4:1.1,0.6:1.6,0.8:2.1,1.0:2.6,1.2:3.2,1.5:3.9,2.0:4.8,2.5:5.8,3.0:6.8}
+  carbon:{0.4:1.1,0.6:1.6,0.8:2.1,1.0:2.6,1.2:3.2,1.5:3.9,2.0:4.8,2.5:5.8,3.0:6.8,3.5:7.8,4.0:8.9,5.0:11.0,6.0:13.1}
 };
 const LINE_ORDER = {nylon:["0.3","0.4","0.6","0.8","1.0","1.2","1.5","2.0","2.5","3.0","3.5","4.0","5.0","6.0"],
-                    pe:["0.4","0.6","0.8","1.0","1.2","1.5","2.0","2.5","3.0"]};
+                    pe:["0.4","0.6","0.8","1.0","1.2","1.5","2.0","2.5","3.0"],
+                    carbon:["0.4","0.6","0.8","1.0","1.2","1.5","2.0","2.5","3.0","3.5","4.0","5.0","6.0"]};
 // 轮容量标称：型号 → "1号线×100m" 等效单位（容量 ∝ L·d²）
 const REEL = {500:80,1000:100,2000:200,2500:250,3000:300,4000:400,5000:500,6000:600};
 const DIA_1 = 0.165; // 1号线直径 mm
+// 环境折损（双向统一，正向与反向共用同一因子 → 往返自洽）：
+//   静水 1.0 / 走水·江河 0.85 / 海钓 0.65（磨线+冲击）
+const REV_ENV_FACTOR = [1.0, 0.85, 0.65];
 
 /* ---------------- 工具 ---------------- */
 const $ = id => document.getElementById(id);
@@ -236,23 +241,29 @@ function calc(){
 
   const out=[];
   const T_req = W * f.k;                       // 拉力需求 = 体重 × 经验比值系数 k（按实战线组表回归拟合）
+  // R3: 环境折损双向统一（正向 need = T_req / factor，与反向反解共用同一因子）
+  const env_f = mode==="sea" ? REV_ENV_FACTOR[2] : (cur>=1 ? REV_ENV_FACTOR[1] : REV_ENV_FACTOR[0]);
+  const T_need = T_req / env_f;
+  const envNote = env_f===1.0 ? "" : ` → 环境折损×${env_f.toFixed(2)} → 需求${fmt(T_need)}kg`;
 
   // ---- 线 ----
   let mainLine, subLine, mainF;
   if(mode==="lure"){
-    // 路亚：按饵重定最小线号，再按拉力取大
+    // 路亚：按饵重定最小线号，再按拉力取大（R1: 捕获封顶警告）
     const byLure = lureW<=3?0.4 : lureW<=7?0.6 : lureW<=12?0.8 : lureW<=20?1.0 : 1.5;
-    const p1=pickLine("pe", T_req), p2=pickLine("pe", BREAK.pe[byLure]||4);
+    const p1=pickLine("pe", T_need), p2=pickLine("pe", BREAK.pe[byLure]||4);
     mainLine = Math.max(p1.no, p2.no);
-    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg → PE ${mainLine}号(${BREAK.pe[mainLine]}kg)；饵重${lureW}g要求 ≥${byLure}号，取大`;
-    const leadNo = Math.min(mainLine*2, mainLine+1);
-    const carbonNos = Object.keys(BREAK.carbon).map(Number).sort((a,b)=>a-b);
-    const snapLead = carbonNos.find(c=>c>=leadNo) || carbonNos[carbonNos.length-1];
-    subLine = {no:snapLead, note:`碳线前导 ${snapLead}号(破断${BREAK.carbon[snapLead]}kg) — 受控薄弱点，挂底断前导`};
+    const lureWarn = (p1.capped||p2.capped) ? ` <span class="warn">⚠ 超出PE线表上限，建议降低目标体重或换更粗线径</span>` : "";
+    // R2: 前导由 T_need 反查碳线表（不再按主线号数换算），输出系统强度 = min(主线, 前导)
+    const lp = pickLine("carbon", T_need);
+    const sysStr = Math.min(BREAK.pe[mainLine], lp.br);
+    const lwarn = lp.capped ? ` <span class="warn">⚠ 超出碳线表上限，大物需加粗前导</span>` : "";
+    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → PE ${mainLine}号(${BREAK.pe[mainLine]}kg)；饵重${lureW}g要求 ≥${byLure}号，取大${lureWarn}`;
+    subLine = {no:lp.no, note:`碳线前导 ${lp.no}号(破断${lp.br}kg) — 按T_need反查碳线表${lwarn}；系统强度 = min(主线${BREAK.pe[mainLine]}kg, 前导${lp.br}kg) = ${sysStr}kg`};
   } else {
-    const p = pickLine(mat, T_req);
+    const p = pickLine(mat, T_need);
     mainLine = p.no;
-    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg → 选破断≥${fmt(T_req)}kg → ${mat==="nylon"?"尼龙":"PE"} ${p.no}号(${p.br}kg)` +
+    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → 选破断≥${fmt(T_need)}kg → ${mat==="nylon"?"尼龙":"PE"} ${p.no}号(${p.br}kg)` +
             (p.capped ? ` <span class="warn">⚠ 超出${mat==="nylon"?"尼龙":"PE"}线表上限，建议换${mat==="nylon"?"PE":"更粗线径"}或降低目标体重</span>` : "");
     const subNo = Math.max(0.3, Math.round(mainLine*0.6*10)/10);  // 子线 ≈ 主线的60%
     subLine = {no:subNo, note: subNo>=mainLine
@@ -260,8 +271,8 @@ function calc(){
         : `子线 ${subNo}号 ≈ 主线60% — 挂底断子线保主线`};
   }
   out.push({k:"主线", v:`${mainLine} 号`, s:mat==="nylon"?"尼龙":"PE", f:mainF});
-  // C7: 台钓子线默认尼龙（即使主线选了PE）；路亚用碳线前导；其余随主线
-  const subMat = mode==="lure" ? "碳线" : (mode==="tai" ? "尼龙" : (mat==="nylon"?"尼龙":"PE"));
+  // C7/R7: 非路亚子线材质固定尼龙（台钓/路滑/海钓实战子线均为尼龙，即使主线选PE）
+  const subMat = mode==="lure" ? "碳线" : "尼龙";
   out.push({k:mode==="lure"?"前导":"子线", v:`${subLine.no} 号`, s:subMat, f:subLine.note});
 
   // ---- 钩（按钓法/海淡分维度） ----
@@ -386,7 +397,6 @@ function copySum(){
 }
 
 /* ---------------- 反向计算 ---------------- */
-const REV_ENV_FACTOR = [1.0, 0.85, 0.65]; // 静水/江河缓流(磨线折损)/海钓(磨线+冲击)：破断有效值折扣
 function rev(){
   const mat=$("rmat").value, env=parseInt($("renv").value);
   $("rmatTag").textContent = mat==="nylon"?"尼龙":"PE";
