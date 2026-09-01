@@ -189,7 +189,7 @@
 
   <div class="note" style="margin-top:18px">
     公式与数据源：线号制 d≈0.165√号（JAFS 行业标准）；破断拉力表取主流品牌典型值（尼龙/PE/碳线差异已区分），
-    尼龙表较 JAFS 参考强力偏高 15–39%（取品牌宣传值），实战请留余量；
+    尼龙表较 JAFS 参考强力偏高约 10–40%（取品牌宣传值），实战请留余量；
     综合系数 k 为<b>经验比值拟合</b>（按实战线组表回归：k = 破断需求/体重，小个体鱼因钩线最小规格与瞬时冲击而比值更高）；
     环境折损（静水 1.0 / 走水·江河 0.85 / 海钓 0.65）为磨线与冲击折减，正向反向共用同一因子；
     吃铅经验式 = (水深+竿长)/2 + 风力修正（钓界通行公式，非力学推导，已标注）。
@@ -481,11 +481,24 @@ function calc(){
     mainLine = Math.max(p1.no, p2.no);
     const lureWarn = (p1.capped||p2.capped) ? ` <span class="warn">⚠ 超出PE线表上限，建议降低目标体重或换更粗线径</span>` : "";
     // R2: 前导由 T_need 反查碳线表（不再按主线号数换算），输出系统强度 = min(主线, 前导)
-    const lp = pickLine("carbon", T_need);
-    const sysStr = Math.min(BREAK.pe[mainLine], lp.br);
-    const lwarn = lp.capped ? ` <span class="warn">⚠ 超出碳线表上限，大物需加粗前导</span>` : "";
-    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → PE ${mainLine}号(${BREAK.pe[mainLine]}kg)；饵重${lureW}g要求 ≥${byLure}号，取大${lureWarn}`;
-    subLine = {no:lp.no, note:`碳线前导 ${lp.no}号(破断${lp.br}kg) — 按T_need反查碳线表${lwarn}；系统强度 = min(主线${BREAK.pe[mainLine]}kg, 前导${lp.br}kg) = ${sysStr}kg`};
+    // S1: 前导在 [T_need, 主线破断] 区间内取 ≤主线破断的最大碳线（牺牲式，挂底断前导）；
+    //     表内无此区间值时回退 pickLine（≥T_need 最小），此时可能倒挂，需注明
+    const mainBr = BREAK.pe[mainLine];
+    const cands = Object.entries(BREAK.carbon).filter(([k,br]) => T_need <= br && br <= mainBr);
+    let lp, lnote;
+    if(cands.length){
+      lp = cands.reduce((a,b)=>BREAK.carbon[a[0]]>=BREAK.carbon[b[0]]?a:b)[0];
+      lnote = "前导≤主线，挂底断前导保主线 ✓";
+    } else {
+      lp = pickLine("carbon", T_need).no;
+      lnote = `⚠ 碳线表无 [需求, 主线] 区间值：前导可能≥主线，挂底断的是主线（系统最弱点在主线）`;
+    }
+    const lbr = BREAK.carbon[lp];
+    const lcapped = T_need > Math.max(...Object.values(BREAK.carbon));
+    const sysStr = Math.min(mainBr, lbr);
+    const lwarn = lcapped ? ` <span class="warn">⚠ 超出碳线表上限，大物需加粗前导</span>` : "";
+    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → PE ${mainLine}号(${mainBr}kg)；饵重${lureW}g要求 ≥${byLure}号，取大${lureWarn}`;
+    subLine = {no:parseFloat(lp), note:`碳线前导 ${lp}号(破断${lbr}kg) — ${lnote}${lwarn}；系统强度 = min(主线${mainBr}kg, 前导${lbr}kg) = ${sysStr}kg`};
   } else {
     const p = pickLine(mat, T_need);
     mainLine = p.no;
@@ -672,7 +685,8 @@ function buildFishSelect(){
   const prev = sel.value;
   sel.innerHTML="";
   list.forEach(f=>{ const o=document.createElement("option"); o.value=f.name; o.textContent=f.name+(f.salt?" (海)":""); sel.appendChild(o); });
-  if(!list.find(f=>f.name===prev)) sel.value = list[0].name;   // 原选中鱼被过滤掉则重置
+  // S4: innerHTML 清空后选中态丢失——若 prev 仍在列表中必须显式恢复，否则会停在第一项
+  sel.value = list.some(f=>f.name===prev) ? prev : list[0].name;
   fishChange();
 }
 function showTab(t){

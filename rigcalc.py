@@ -62,6 +62,19 @@ def pick_reel(Lm, d):
     return (best if best else 6000), round(req), best is None
 
 # ---------------- 正向 ----------------
+def select_main(mode, mat, T_need, lure_w):
+    """正向选主线（S3: 与 selftest 共享，避免内联重写漂移）。
+    返回 (线号, 破断kg, capped)。"""
+    if mode == "lure":
+        by_lure = 0.4 if lure_w <= 3 else 0.6 if lure_w <= 7 else 0.8 if lure_w <= 12 else 1.0 if lure_w <= 20 else 1.5
+        p1, _, c1 = pick_line("pe", T_need)
+        p2, _, c2 = pick_line("pe", BREAK["pe"][by_lure])
+        no = max(p1, p2)
+        return no, BREAK["pe"][no], (c1 or c2)
+    p, br, capped = pick_line(mat, T_need)
+    return p, br, capped
+
+
 def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
     f = next(x for x in FISH if x["name"] == fish_name)
     out = []
@@ -73,23 +86,26 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
     env_note = "" if env_f == 1.0 else f" → 环境折损×{env_f:.2f} → 需求{fmt(T_need)}kg"
 
     # 线
+    main, main_br, capped = select_main(mode, mat, T_need, lure_w)
     if mode == "lure":
-        by_lure = 0.4 if lure_w <= 3 else 0.6 if lure_w <= 7 else 0.8 if lure_w <= 12 else 1.0 if lure_w <= 20 else 1.5
-        p1, br1, c1 = pick_line("pe", T_need)
-        p2, br2, c2 = pick_line("pe", BREAK["pe"][by_lure])
-        main = max(p1, p2)
-        warn = "  ⚠ 超出PE线表上限，建议降低目标体重或换更粗线径" if (c1 or c2) else ""
-        # R2: 前导由 T_req 反查碳线表（不再按主线号数换算），保证系统强度≈前导强度
-        lp, lbr, lcapped = pick_line("carbon", T_need)
-        sys_str = min(BREAK["pe"][main], lbr)
-        lwarn = "  ⚠ 超出碳线表上限，大物需加粗前导" if lcapped else ""
-        out.append(f"主线: PE {main}号(破断{BREAK['pe'][main]}kg)  前导: 碳线 {lp}号(破断{lbr}kg){lwarn}")
-        out.append(f"系统强度: min(主线{BREAK['pe'][main]}kg, 前导{lbr}kg) = {sys_str}kg  [T_req={fmt(T_req)}kg{env_note}]{warn}")
+        warn = "  ⚠ 超出PE线表上限，建议降低目标体重或换更粗线径" if capped else ""
+        # S1: 前导在 [T_need, 主线破断] 区间内取 ≤主线破断的最大碳线（牺牲式，挂底断前导）；
+        #     表内无此区间值时回退 pickLine（≥T_need 最小），此时可能倒挂，需注明
+        cands = [k for k, br in BREAK["carbon"].items() if T_need <= br <= main_br]
+        if cands:
+            lp = max(cands, key=lambda k: BREAK["carbon"][k])
+            lbr = BREAK["carbon"][lp]
+            lnote = "前导≤主线，挂底断前导保主线 ✓"
+        else:
+            lp, lbr, lcapped = pick_line("carbon", T_need)
+            lwarn = "  ⚠ 超出碳线表上限，大物需加粗前导" if lcapped else ""
+            lnote = f"⚠ 碳线表无 [需求, 主线] 区间值：前导可能≥主线，挂底断的是主线（系统最弱点在主线）{lwarn}"
+        sys_str = min(main_br, lbr)
+        out.append(f"主线: PE {main}号(破断{main_br}kg)  前导: 碳线 {lp}号(破断{lbr}kg) — {lnote}")
+        out.append(f"系统强度: min(主线{main_br}kg, 前导{lbr}kg) = {sys_str}kg  [T_req={fmt(T_req)}kg{env_note}]{warn}")
     else:
-        p, br, capped = pick_line(mat, T_need)
-        main = p
         warn = "  ⚠ 超出线表上限，建议换PE或降低目标体重" if capped else ""
-        out.append(f"主线: {mat} {p}号(破断{br}kg)  [T_req={fmt(T_req)}kg{env_note}]{warn}")
+        out.append(f"主线: {mat} {main}号(破断{main_br}kg)  [T_req={fmt(T_req)}kg{env_note}]{warn}")
         sub_no = max(0.3, round(main * 0.6 * 10) / 10)
         sub_note = " — 主线已最细，子线同号无冗余" if sub_no >= main else ""
         out.append(f"子线: {sub_no}号{sub_note}")
@@ -172,7 +188,12 @@ def calc_reverse(mat, line_no, env):
     keys = sorted(BREAK[mat].keys())
     # R4: 向下取整到最近表内键（向上取整会高估线强，安全方向错误）
     cands = [k for k in keys if k <= line_no]
-    no = max(cands) if cands else keys[0]
+    if not cands:
+        # S6: 输入低于表内最细档 → 明确提示而不是静默向上取
+        print(f"提示: 输入 {line_no} 号低于 {mat} 表内最细 {keys[0]} 号，按最细档计算（实际更细线材请自行评估）", file=sys.stderr)
+        no = keys[0]
+    else:
+        no = max(cands)
     T = BREAK[mat][no] * REV_ENV_FACTOR[env]
     rows = []
     for f in FISH:
@@ -243,20 +264,14 @@ def selftest():
                 continue
             for mode in (["sea", "lusu", "lure"] if env == 2 else ["tai", "lusu", "lure"]):
                 W = max(f["min"], round(f["min"] * 3, 2))
-                # 正向：选线（用该模式对应的材质与折损）
+                # 正向：选线（S3: 调用共享的 select_main，与 calc_forward 同路径，防内联重写漂移）
                 cur = 0 if env == 0 else 1 if env == 1 else 2
                 T_req = W * f["k"]
                 env_f = REV_ENV_FACTOR[env]
                 T_need = T_req / env_f
                 mat = "pe" if mode == "lure" else "nylon"
-                if mode == "lure":
-                    by_lure = 0.4 if W <= 0.3 else 0.6 if W <= 1 else 0.8
-                    p1, _, _ = pick_line("pe", T_need)
-                    p2, _, _ = pick_line("pe", BREAK["pe"][by_lure])
-                    line_no = max(p1, p2)
-                    line_br = BREAK["pe"][line_no]
-                else:
-                    line_no, line_br, _ = pick_line(mat, T_need)
+                lure_w = max(2.0, min(20.0, W * 8))  # 鱼重→饵重的粗糙映射（仅用于选线路径一致）
+                line_no, line_br, _ = select_main(mode, mat, T_need, lure_w)
                 # 反向：同一线号同一环境反解
                 wmax = (line_br * REV_ENV_FACTOR[env]) / f["k"]
                 n += 1
