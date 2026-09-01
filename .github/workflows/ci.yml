@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 单源一致性校验 (index.html 内联数据 ↔ data.json)
+        run: python3 build.py --check
+
+      - name: CLI 往返一致性自测 (正向↔反向)
+        run: python3 rigcalc.py --selftest
+
+      - name: CLI 冒烟测试
+        run: |
+          python3 rigcalc.py 鲫鱼 0.5 --depth 2 > /dev/null
+          python3 rigcalc.py 黑鲷 1.0 --mode lusu --depth 3 > /dev/null
+          python3 rigcalc.py 海鲈 2.0 --mode lure --lure 12 > /dev/null
+          python3 rigcalc.py 翘嘴 1.0 --mode lure --lure 8 > /dev/null
+          python3 rigcalc.py --reverse --mat pe --line 1.0 --env 2 > /dev/null
+
+      - name: CLI 拒绝路径校验
+        run: |
+          set +e
+          python3 rigcalc.py 黑鲷 1.0 --mode tai 2>/dev/null; [ $? -eq 1 ] || { echo "FAIL: tai+salt should exit 1"; exit 1; }
+          python3 rigcalc.py 鲫鱼 0.5 --mode sea 2>/dev/null; [ $? -eq 1 ] || { echo "FAIL: sea+fresh should exit 1"; exit 1; }
+          echo "rejection paths OK"
