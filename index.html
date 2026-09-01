@@ -466,6 +466,7 @@ function calc(){
 
   const out=[];
   const T_req = W * f.k;                       // 拉力需求 = 体重 × 经验比值系数 k（按实战线组表回归拟合）
+  const kNote = `k=${f.k} = 该鱼经验拉力比（破断需求/体重，按实战线组表回归拟合，见页脚）`;
   // R3: 环境折损双向统一（正向 need = T_req / factor，与反向反解共用同一因子）
   //     折损按目标鱼的盐度判定（非模式）：海路亚/海边路滑钓海鱼同样吃海钓折损
   const env_f = f.salt ? REV_ENV_FACTOR[2] : (cur>=1 ? REV_ENV_FACTOR[1] : REV_ENV_FACTOR[0]);
@@ -497,12 +498,12 @@ function calc(){
     const lcapped = T_need > Math.max(...Object.values(BREAK.carbon));
     const sysStr = Math.min(mainBr, lbr);
     const lwarn = lcapped ? ` <span class="warn">⚠ 超出碳线表上限，大物需加粗前导</span>` : "";
-    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → PE ${mainLine}号(${mainBr}kg)；饵重${lureW}g要求 ≥${byLure}号，取大${lureWarn}`;
+    mainF = `${kNote} → T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → PE ${mainLine}号(${mainBr}kg)；饵重${lureW}g要求 ≥${byLure}号，取大${lureWarn}`;
     subLine = {no:parseFloat(lp), note:`碳线前导 ${lp}号(破断${lbr}kg) — ${lnote}${lwarn}；系统强度 = min(主线${mainBr}kg, 前导${lbr}kg) = ${sysStr}kg`};
   } else {
     const p = pickLine(mat, T_need);
     mainLine = p.no;
-    mainF = `T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → 选破断≥${fmt(T_need)}kg → ${mat==="nylon"?"尼龙":"PE"} ${p.no}号(${p.br}kg)` +
+    mainF = `${kNote} → T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → 选破断≥${fmt(T_need)}kg → ${mat==="nylon"?"尼龙":"PE"} ${p.no}号(${p.br}kg)` +
             (p.capped ? ` <span class="warn">⚠ 超出${mat==="nylon"?"尼龙":"PE"}线表上限，建议换${mat==="nylon"?"PE":"更粗线径"}或降低目标体重</span>` : "");
     const subNo = Math.max(0.3, Math.round(mainLine*0.6*10)/10);  // 子线 ≈ 主线的60%
     subLine = {no:subNo, note: subNo>=mainLine

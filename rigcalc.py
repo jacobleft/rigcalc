@@ -79,6 +79,7 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
     f = next(x for x in FISH if x["name"] == fish_name)
     out = []
     T_req = W * f["k"]
+    k_note = f"k={f['k']} = 该鱼经验拉力比（破断需求/体重，按实战线组表回归拟合）"
     # R3: 环境折损双向统一（正向 need = T_req / factor，与反向反解共用同一因子）
     #     折损按目标鱼的盐度判定（非模式）：海路亚/海边路滑钓海鱼同样吃海钓折损
     env_f = REV_ENV_FACTOR[2] if f["salt"] else (REV_ENV_FACTOR[1] if cur >= 1 else REV_ENV_FACTOR[0])
@@ -102,10 +103,10 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
             lnote = f"⚠ 碳线表无 [需求, 主线] 区间值：前导可能≥主线，挂底断的是主线（系统最弱点在主线）{lwarn}"
         sys_str = min(main_br, lbr)
         out.append(f"主线: PE {main}号(破断{main_br}kg)  前导: 碳线 {lp}号(破断{lbr}kg) — {lnote}")
-        out.append(f"系统强度: min(主线{main_br}kg, 前导{lbr}kg) = {sys_str}kg  [T_req={fmt(T_req)}kg{env_note}]{warn}")
+        out.append(f"系统强度: min(主线{main_br}kg, 前导{lbr}kg) = {sys_str}kg  [{k_note} → T_req={fmt(T_req)}kg{env_note}]{warn}")
     else:
         warn = "  ⚠ 超出线表上限，建议换PE或降低目标体重" if capped else ""
-        out.append(f"主线: {mat} {main}号(破断{main_br}kg)  [T_req={fmt(T_req)}kg{env_note}]{warn}")
+        out.append(f"主线: {mat} {main}号(破断{main_br}kg)  [{k_note} → T_req={fmt(T_req)}kg{env_note}]{warn}")
         sub_no = max(0.3, round(main * 0.6 * 10) / 10)
         sub_note = " — 主线已最细，子线同号无冗余" if sub_no >= main else ""
         out.append(f"子线: {sub_no}号{sub_note}")
