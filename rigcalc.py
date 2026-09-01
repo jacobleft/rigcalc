@@ -9,42 +9,34 @@ RigCalc CLI — 钓鱼装备计算器（与网页版同一套公式/数据）
 """
 
 import argparse
+import json
 import math
+import os
 import sys
 
-# ---------------- 数据（与 index.html 保持同步） ----------------
-FISH = [
-    {"name": "白条",  "min": 0.02, "max": 0.2,  "k": 15,  "bite": "轻口", "salt": False},
-    {"name": "罗非仔","min": 0.05, "max": 0.3,  "k": 10,  "bite": "正常", "salt": False},
-    {"name": "鲫鱼",  "min": 0.1,  "max": 1.5,  "k": 4,   "bite": "轻口", "salt": False},
-    {"name": "罗非",  "min": 0.3,  "max": 2.5,  "k": 3.7, "bite": "猛口", "salt": False},
-    {"name": "鲮鱼",  "min": 0.3,  "max": 2,    "k": 3.7, "bite": "正常", "salt": False},
-    {"name": "鲤鱼",  "min": 0.5,  "max": 15,   "k": 2.0, "bite": "正常", "salt": False},
-    {"name": "草鱼",  "min": 0.5,  "max": 15,   "k": 2.2, "bite": "正常", "salt": False},
-    {"name": "鲢鳙",  "min": 1,    "max": 20,   "k": 1.7, "bite": "猛口", "salt": False},
-    {"name": "翘嘴",  "min": 0.2,  "max": 8,    "k": 3.0, "bite": "猛口", "salt": False},
-    {"name": "沙尖",  "min": 0.05, "max": 0.3,  "k": 13,  "bite": "轻口", "salt": True},
-    {"name": "黑鲷",  "min": 0.3,  "max": 4,    "k": 4.5, "bite": "猛口", "salt": True},
-    {"name": "海鲈",  "min": 0.5,  "max": 10,   "k": 2.8, "bite": "猛口", "salt": True},
-]
+# ---------------- 数据：单一数据源 data.json（与 index.html 由 build.py 同源生成） ----------------
+_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
 
-BREAK = {
-    "nylon": {0.3:0.8,0.4:1.0,0.6:1.5,0.8:2.0,1.0:2.5,1.2:3.0,1.5:3.7,2.0:4.5,2.5:5.5,3.0:6.5,3.5:7.5,4.0:8.5,5.0:10.5,6.0:12.5},
-    "pe":    {0.4:4,0.6:6,0.8:8,1.0:10,1.2:12,1.5:15,2.0:20,2.5:25,3.0:30},
-    "carbon":{0.4:1.1,0.6:1.6,0.8:2.1,1.0:2.6,1.2:3.2,1.5:3.9,2.0:4.8,2.5:5.8,3.0:6.8,3.5:7.8,4.0:8.9,5.0:11.0,6.0:13.1},
-}
-LINE_ORDER = {
-    "nylon": [0.3,0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0,3.5,4.0,5.0,6.0],
-    "pe":    [0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0],
-    "carbon":[0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0,3.5,4.0,5.0,6.0],
-}
-REEL = {500:80, 1000:100, 2000:200, 2500:250, 3000:300, 4000:400, 5000:500, 6000:600}
-DIA_1 = 0.165
-# 环境折损（双向统一，正向与反向共用同一因子 → 往返自洽）：
-#   静水 1.0 / 走水·江河 0.85 / 海钓 0.65（磨线+冲击）
-REV_ENV_FACTOR = [1.0, 0.85, 0.65]
 
-MODES = {"tai": "台钓", "lusu": "路滑", "lure": "路亚", "sea": "海钓"}
+def _load_data():
+    with open(_DATA_PATH, encoding="utf-8") as f:
+        d = json.load(f)
+    # JSON 键是字符串，转换回数值键供查找使用
+    for mat in d["BREAK"]:
+        d["BREAK"][mat] = {float(k): v for k, v in d["BREAK"][mat].items()}
+        d["LINE_ORDER"][mat] = [float(x) for x in d["LINE_ORDER"][mat]]
+    d["REEL"] = {int(k): v for k, v in d["REEL"].items()}
+    return d
+
+
+DATA = _load_data()
+FISH = DATA["FISH"]
+BREAK = DATA["BREAK"]
+LINE_ORDER = DATA["LINE_ORDER"]
+REEL = DATA["REEL"]
+DIA_1 = DATA["DIA_1"]
+REV_ENV_FACTOR = DATA["REV_ENV_FACTOR"]
+MODES = DATA["MODES"]
 FISH_NAMES = [f["name"] for f in FISH]
 
 # ---------------- 工具 ----------------

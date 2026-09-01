@@ -2,7 +2,20 @@
 
 输入「目标鱼 + 体重 + 水深 + 风力」→ 输出全套钓组配置；或输入「线号 + 材质」→ 反解可钓鱼种安全上限。
 
-纯前端单文件（`index.html`），零依赖，本地运行，无任何数据上传。
+纯前端单文件（`index.html`）或零依赖 CLI（`rigcalc.py`），本地运行，无任何数据上传。
+
+## 单源架构（R6）
+
+**`data.json` 是唯一数据源**（鱼种表/破断表/轮容量/环境折损），两个入口共享：
+
+```
+data.json ──┬── rigcalc.py（运行时直接读取）
+            └── build.py → 内联进 index.html（保持 file:// 直开，零依赖）
+```
+
+**改数据流程**：编辑 `data.json` → `python3 build.py`（重新生成 index.html）→ `python3 rigcalc.py --selftest`。
+
+**校验**：`python3 build.py --check` 确认 index.html 内联数据与 data.json 一致（CI 可挂）。
 
 ## 物理框架
 
