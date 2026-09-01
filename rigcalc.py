@@ -67,7 +67,8 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
     out = []
     T_req = W * f["k"]
     # R3: 环境折损双向统一（正向 need = T_req / factor，与反向反解共用同一因子）
-    env_f = REV_ENV_FACTOR[2] if mode == "sea" else (REV_ENV_FACTOR[1] if cur >= 1 else REV_ENV_FACTOR[0])
+    #     折损按目标鱼的盐度判定（非模式）：海路亚/海边路滑钓海鱼同样吃海钓折损
+    env_f = REV_ENV_FACTOR[2] if f["salt"] else (REV_ENV_FACTOR[1] if cur >= 1 else REV_ENV_FACTOR[0])
     T_need = T_req / env_f
     env_note = "" if env_f == 1.0 else f" → 环境折损×{env_f:.2f} → 需求{fmt(T_need)}kg"
 
@@ -217,13 +218,13 @@ def main():
     if args.fish not in FISH_NAMES:
         print(f"未知鱼种: {args.fish}。可选: {', '.join(FISH_NAMES)}", file=sys.stderr)
         sys.exit(1)
-    # R5: CLI 与 web 对齐 — 海钓模式只接受海水鱼，反之亦然
+    # R5: 台钓只淡水、海钓只海水；路滑/路亚两者皆可（海边路滑/海路亚是真实玩法）
     f = next(x for x in FISH if x["name"] == args.fish)
+    if args.mode == "tai" and f["salt"]:
+        print(f"错误: {args.fish} 是海水鱼，台钓手竿线组不适用（请用路滑/路亚/海钓模式）", file=sys.stderr)
+        sys.exit(1)
     if args.mode == "sea" and not f["salt"]:
         print(f"错误: {args.fish} 是淡水鱼，不能用海钓模式（请选海水鱼种）", file=sys.stderr)
-        sys.exit(1)
-    if args.mode != "sea" and f["salt"]:
-        print(f"错误: {args.fish} 是海水鱼，请用 --mode sea（或选淡水鱼种）", file=sys.stderr)
         sys.exit(1)
 
     print(f"【{args.fish} {args.weight}kg · {MODES[args.mode]} · 水深{args.depth}m · {args.wind}级风】")
@@ -240,7 +241,7 @@ def selftest():
         for env in (0, 1, 2):
             if (env == 2) != f["salt"]:
                 continue
-            for mode in (["sea"] if env == 2 else ["tai", "lusu", "lure"]):
+            for mode in (["sea", "lusu", "lure"] if env == 2 else ["tai", "lusu", "lure"]):
                 W = max(f["min"], round(f["min"] * 3, 2))
                 # 正向：选线（用该模式对应的材质与折损）
                 cur = 0 if env == 0 else 1 if env == 1 else 2

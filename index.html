@@ -427,7 +427,8 @@ function calc(){
   const out=[];
   const T_req = W * f.k;                       // 拉力需求 = 体重 × 经验比值系数 k（按实战线组表回归拟合）
   // R3: 环境折损双向统一（正向 need = T_req / factor，与反向反解共用同一因子）
-  const env_f = mode==="sea" ? REV_ENV_FACTOR[2] : (cur>=1 ? REV_ENV_FACTOR[1] : REV_ENV_FACTOR[0]);
+  //     折损按目标鱼的盐度判定（非模式）：海路亚/海边路滑钓海鱼同样吃海钓折损
+  const env_f = f.salt ? REV_ENV_FACTOR[2] : (cur>=1 ? REV_ENV_FACTOR[1] : REV_ENV_FACTOR[0]);
   const T_need = T_req / env_f;
   const envNote = env_f===1.0 ? "" : ` → 环境折损×${env_f.toFixed(2)} → 需求${fmt(T_need)}kg`;
 
@@ -624,11 +625,10 @@ function fishChange(){
   $("weight").value = Math.min(f.min*3, 20);   // C2: max(f.min, f.min*3) 恒等于 f.min*3
   calc();
 }
-// C5: 正向鱼种下拉按钓法过滤（海钓只列海水鱼，其余只列淡水鱼）
+// C5: 正向鱼种下拉按钓法过滤 — 台钓只淡水、海钓只海水、路滑/路亚两者皆可（海边路滑/海路亚是真实玩法）
 function buildFishSelect(){
   const m=$("mode").value, sel=$("fish");
-  const seaOnly = m==="sea";
-  const list = FISH.filter(f=>f.salt===seaOnly);
+  const list = FISH.filter(f=> m==="tai" ? !f.salt : m==="sea" ? f.salt : true);
   const prev = sel.value;
   sel.innerHTML="";
   list.forEach(f=>{ const o=document.createElement("option"); o.value=f.name; o.textContent=f.name+(f.salt?" (海)":""); sel.appendChild(o); });
