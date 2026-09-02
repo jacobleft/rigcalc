@@ -474,7 +474,7 @@ function calc(){
   const envNote = env_f===1.0 ? "" : ` → 环境折损×${env_f.toFixed(2)} → 需求${fmt(T_need)}kg`;
 
   // ---- 线 ----
-  let mainLine, subLine, mainF;
+  let mainLine, subLine, mainF, leadLine;
   if(mode==="lure"){
     // 路亚：按饵重定最小线号，再按拉力取大（R1: 捕获封顶警告）
     const byLure = lureW<=3?0.4 : lureW<=7?0.6 : lureW<=12?0.8 : lureW<=20?1.0 : 1.5;
@@ -505,17 +505,28 @@ function calc(){
     mainLine = p.no;
     mainF = `${kNote} → T_req = W×k = ${fmt(W)}×${f.k} = ${fmt(T_req)}kg${envNote} → 选破断≥${fmt(T_need)}kg → ${mat==="nylon"?"尼龙":"PE"} ${p.no}号(${p.br}kg)` +
             (p.capped ? ` <span class="warn">⚠ 超出${mat==="nylon"?"尼龙":"PE"}线表上限，建议换${mat==="nylon"?"PE":"更粗线径"}或降低目标体重</span>` : "");
-    const subNo = Math.max(0.3, Math.round(mainLine*0.6*10)/10);  // 子线 ≈ 主线的60%
-    const lusuNote = mode==="lusu" ? "（路滑无前导：漂座以上为主线，牺牲环节=子线）" : "";
-    subLine = {no:subNo, note: subNo>=mainLine
-        ? `子线 ${subNo}号 — 主线已是最细档，子线同号（C6 边界），此时无「断子线保主线」冗余，钓线组需整体降级${lusuNote}`
-        : `子线 ${subNo}号 ≈ 主线60% — 挂底断子线保主线${lusuNote}`};
+    if(mode==="lusu" && mat==="pe"){
+      // PE 主线路滑 = 浮游矶钓 PE 仕挂（DAIWA/SHIMANO 官方标配）：
+      // PE 无延展易拔钩、遇礁石/贝壳秒切 → 必须碳素中通前导(3-5m)防磨+缓冲；子线用碳素(ハリス)
+      const lp2 = pickLine("carbon", T_need);
+      leadLine = {no:lp2.no, note:`碳素前导 ${lp2.no}号(破断${lp2.br}kg) — 矶钓 PE 仕挂标配（DAIWA/SHIMANO 官方）：PE 无延展易拔钩、遇礁石/贝壳秒切，碳素防磨+缓冲；挂底断前导保主线`};
+      const sp = pickLine("carbon", T_need*0.6);
+      subLine = {no:sp.no, note:`碳素子线 ${sp.no}号(破断${sp.br}kg) — 矶钓哈里斯(ハリス)标准为碳素：耐磨抗刮、水底抗磨`};
+    } else {
+      const subNo = Math.max(0.3, Math.round(mainLine*0.6*10)/10);  // 子线 ≈ 主线的60%
+      const lusuNote = mode==="lusu" ? "（路滑尼龙主线无需前导：尼龙本身有延展缓冲+耐磨；牺牲环节=子线）" : "";
+      subLine = {no:subNo, note: subNo>=mainLine
+          ? `子线 ${subNo}号 — 主线已是最细档，子线同号（C6 边界），此时无「断子线保主线」冗余，钓线组需整体降级${lusuNote}`
+          : `子线 ${subNo}号 ≈ 主线60% — 挂底断子线保主线${lusuNote}`};
+    }
   }
   // 主线材质：路亚分支写死 PE（代码内 pickLine("pe",...)），材质标签必须同步，不能读隐藏的 mat 下拉
   const mainMat = mode==="lure" ? "PE" : (mat==="nylon"?"尼龙":"PE");
   out.push({k:"主线", v:`${mainLine} 号`, s:mainMat, f:mainF});
-  // C7/R7: 非路亚子线材质固定尼龙（台钓/路滑/海钓实战子线均为尼龙，即使主线选PE）
-  const subMat = mode==="lure" ? "碳线" : "尼龙";
+  // PE 路滑（=矶钓 PE 仕挂）：前导卡（碳素）+ 子线卡（碳素）双卡输出
+  if(leadLine) out.push({k:"前导", v:`${leadLine.no} 号`, s:"碳素", f:leadLine.note});
+  // C7/R7: 非路亚子线材质固定尼龙（台钓/路滑/海钓实战子线均为尼龙，即使主线选PE）；路滑PE例外→碳素
+  const subMat = mode==="lure" ? "碳线" : ((mode==="lusu" && mat==="pe") ? "碳素" : "尼龙");
   out.push({k:mode==="lure"?"前导":"子线", v:`${subLine.no} 号`, s:subMat, f:subLine.note});
 
   // ---- 钩（按钓法/海淡分维度） ----

@@ -107,10 +107,18 @@ def calc_forward(fish_name, W, depth, wind, cur, mode, mat, lure_w):
     else:
         warn = "  ⚠ 超出线表上限，建议换PE或降低目标体重" if capped else ""
         out.append(f"主线: {mat} {main}号(破断{main_br}kg)  [{k_note} → T_req={fmt(T_req)}kg{env_note}]{warn}")
-        sub_no = max(0.3, round(main * 0.6 * 10) / 10)
-        lusu_note = "（路滑无前导：漂座以上为主线，牺牲环节=子线）" if mode == "lusu" else ""
-        sub_note = (" — 主线已最细，子线同号无冗余" if sub_no >= main else "") + lusu_note
-        out.append(f"子线: {sub_no}号{sub_note}")
+        if mode == "lusu" and mat == "pe":
+            # PE 主线路滑 = 浮游矶钓 PE 仕挂（DAIWA/SHIMANO 官方标配）：
+            # PE 无延展易拔钩、遇礁石/贝壳秒切 → 必须碳素中通前导(3-5m)防磨+缓冲；子线用碳素(ハリス)
+            lp2, lbr2, _ = pick_line("carbon", T_need)
+            out.append(f"前导: 碳素 {lp2}号(破断{lbr2}kg) — 矶钓 PE 仕挂标配（DAIWA/SHIMANO 官方）：PE 无延展易拔钩、遇礁石/贝壳秒切，碳素防磨+缓冲；挂底断前导保主线")
+            sp, sbr, _ = pick_line("carbon", T_need * 0.6)
+            out.append(f"子线: 碳素 {sp}号(破断{sbr}kg) — 矶钓哈里斯(ハリス)标准为碳素：耐磨抗刮、水底抗磨")
+        else:
+            sub_no = max(0.3, round(main * 0.6 * 10) / 10)
+            lusu_note = "（路滑尼龙主线无需前导：尼龙本身有延展缓冲+耐磨；牺牲环节=子线）" if mode == "lusu" else ""
+            sub_note = (" — 主线已最细，子线同号无冗余" if sub_no >= main else "") + lusu_note
+            out.append(f"子线: {sub_no}号{sub_note}")
 
     # 钩
     if mode == "lure":
