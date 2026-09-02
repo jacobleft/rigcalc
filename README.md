@@ -76,7 +76,18 @@ python3 rigcalc.py --help
 - 综合系数 k：经验比值拟合（k = 破断需求/体重，按实战线组表回归；小个体鱼因钩线最小规格与瞬时冲击而比值更高）
 - 环境折损：静水 1.0 / 走水·江河 0.85 / 海钓 0.65（磨线+冲击折减，正向反向共用）
 - 路亚前导：由 T_req 反查碳线表（不再按主线号数换算），输出系统强度 = min(主线, 前导)
+- PE 路滑（=矶钓 PE 仕挂）：PE 主线必须配碳素前导（防磨+缓冲，PE 无延展易拔钩）+ 碳素子线；尼龙主线无需前导（自身有延展缓冲）
 - 吃铅经验式：钓界通行公式，非力学推导，页面内已标注
 - 往返一致性：`python3 rigcalc.py --selftest`
+
+## 依据来源（已打开页面验证）
+
+| 结论 | 来源 | 实测内容 |
+|---|---|---|
+| 氟碳线折射率 1.42 接近水（1.33），水下隐形；尼龙 1.62 | [Seaguar 官方 FAQ](https://seaguar.com/pages/faqs) | "Air to Water has a refractive index of 1.33. Air to Fluorocarbon has a refractive index of 1.42. Air to Nylon has a refractive index of 1.62. This means that fluorocarbon refracts light closer to water, thus making it more difficult to see when under water." |
+| ハリス（同ショックリーダー）须选磨底（根ズレ）强度高的线；主流为尼龙/氟碳 | [DAIWA 官方初心者教程·道糸・ハリス](https://www.daiwa.com/jp/beginner/tackle/harisu) | "道糸とハリをつなぐハリス（同ショックリーダー）は、根ズレなどに強い加工をした糸を選ぶのがベター"；"ハリスはナイロン、フロロの2タイプが一般的" |
+| 浮游矶钓（フカセ）用 PE 道糸时须配リーダー/ハリス系统 | [DAIWA 磯センサーSS＋Si（PE 磯道糸）产品页](https://www.daiwa.com/jp/product/dgl42xw) | "フロロカーボンハリスにナイロンショックリーダーを併せる人もいれば、フロロカーボンを長く取ってハリスと兼用させる人もいます" |
+
+> 注：seaguar.com / daiwa.com 在本机（macOS + Clash/Surge fake-ip）解析到 198.18.25.x（保留测试网段），web_extract/浏览器工具因此误判为内网拦截；实际内容用 `curl` 直连已验证。
 
 输出为合理区间起点，实际以钓场情况微调。
