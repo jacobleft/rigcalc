@@ -76,12 +76,12 @@ def print_table(kind):
             print(f"{fno(no):>5} {dia(no):>7.3f} {str(br('nylon')):>7} {str(br('carbon')):>7} {str(br('pe')):>6}")
         print("注: 直径 d≈0.165√号（同号同径）；PE 同号拉力≈尼龙3-5倍；尼龙表较JAFS偏高约10-40%（品牌宣传值）")
     elif kind == "hook":
-        # 互换表（一行 = 同等尺寸）
-        types = list(HOOK_XREF[0].keys())
-        print("同尺寸钩型互换（一行 = 同等大小，按钩门宽对齐）：")
-        print("  " + "  ".join(f"{t:<5}" for t in types))
+        # 互换表（首列钩门宽 mm，由 HOOK_DIMS 聚类生成）
+        types = [t for t in HOOK_XREF[0].keys() if t != "gap"]
+        print("同尺寸钩型互换（首列 = 该档实际钩门宽 mm）：")
+        print(f"  {'钩门宽':<9} " + "  ".join(f"{t:<5}" for t in types))
         for row in HOOK_XREF:
-            print("  " + "  ".join(f"{str(row[t]):<5}" for t in types))
+            print(f"  {row['gap']:<9} " + "  ".join(f"{str(row[t]):<5}" for t in types))
         print()
         # 尺寸明细
         for t, dims in HOOK_DIMS.items():
