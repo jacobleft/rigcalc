@@ -39,6 +39,8 @@ REV_ENV_FACTOR = DATA["REV_ENV_FACTOR"]
 MODES = DATA["MODES"]
 HOOKS = DATA.get("HOOKS", [])
 AWA = DATA.get("AWA", {})
+HOOK_XREF = DATA.get("HOOK_XREF", [])
+HOOK_DIMS = DATA.get("HOOK_DIMS", {})
 FISH_NAMES = [f["name"] for f in FISH]
 
 # ---------------- 工具 ----------------
@@ -74,9 +76,21 @@ def print_table(kind):
             print(f"{fno(no):>5} {dia(no):>7.3f} {str(br('nylon')):>7} {str(br('carbon')):>7} {str(br('pe')):>6}")
         print("注: 直径 d≈0.165√号（同号同径）；PE 同号拉力≈尼龙3-5倍；尼龙表较JAFS偏高约10-40%（品牌宣传值）")
     elif kind == "hook":
-        print(f"{'钩型':<6} {'号数':<8} {'适用鱼':<22} 特点")
-        for o in HOOKS:
-            print(f"{o['type']:<6} {o['sizes']:<8} {o['target']:<22} {o['note']}")
+        # 互换表（一行 = 同等尺寸）
+        types = list(HOOK_XREF[0].keys())
+        print("同尺寸钩型互换（一行 = 同等大小，按钩门宽对齐）：")
+        print("  " + "  ".join(f"{t:<5}" for t in types))
+        for row in HOOK_XREF:
+            print("  " + "  ".join(f"{str(row[t]):<5}" for t in types))
+        print()
+        # 尺寸明细
+        for t, dims in HOOK_DIMS.items():
+            print(f"== {t} ==  号数: 钩身长/钩门宽/钩条径 mm, 拉力kg")
+            for no in sorted(dims.keys(), key=float):
+                L, gap, wire, pull = dims[no]
+                fno = str(int(float(no))) if float(no).is_integer() else no
+                print(f"  {fno}号: {L}/{gap}/{wire}mm, {pull}kg")
+        print("注: 钩号无统一标准，同号不同型尺寸差异大（1号: 伊势尼钩门3.9mm vs 袖钩2.7mm）；数据多源交叉核验，品牌间±5-10%出入")
     elif kind == "awa":
         print(f"{'标记':<6} {'配重g':>6} 系列 / 典型场景")
         for mark, g in sorted(AWA.items(), key=lambda kv: kv[1]):
