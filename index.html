@@ -810,14 +810,15 @@ function showTab(t){
 
 // ---------------- 速查表渲染 ----------------
 function fmtBreak(mat, no){ const b = BREAK[mat] && BREAK[mat][no]; return b==null ? "—" : b + " kg"; }
+function fmtNo(no){ const n = parseFloat(no); return Number.isInteger(n) ? String(n) : no; }
 function buildTables(){
   // 鱼线：三材质号数并集升序
   const nos = [...new Set([...LINE_ORDER.nylon, ...LINE_ORDER.pe, ...LINE_ORDER.carbon])]
     .map(Number).sort((a,b)=>a-b).map(String);
-  let h = `<tr><th>号数</th><th>直径 mm</th><th>尼龙</th><th>PE</th><th>碳素</th></tr>`;
+  let h = `<tr><th>号数</th><th>直径 mm</th><th>尼龙</th><th>碳素</th><th>PE</th></tr>`;
   nos.forEach(no=>{
     const d = (DIA_1*Math.sqrt(parseFloat(no))).toFixed(3);
-    h += `<tr><td><b>${no} 号</b></td><td>${d}</td><td>${fmtBreak("nylon",no)}</td><td>${fmtBreak("pe",no)}</td><td>${fmtBreak("carbon",no)}</td></tr>`;
+    h += `<tr><td><b>${fmtNo(no)} 号</b></td><td>${d}</td><td>${fmtBreak("nylon",no)}</td><td>${fmtBreak("carbon",no)}</td><td>${fmtBreak("pe",no)}</td></tr>`;
   });
   $("tblLine").innerHTML = h;
   // 鱼钩

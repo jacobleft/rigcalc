@@ -67,10 +67,11 @@ def pick_reel(Lm, d):
 def print_table(kind):
     if kind == "line":
         nos = sorted(set(LINE_ORDER["nylon"]) | set(LINE_ORDER["pe"]) | set(LINE_ORDER["carbon"]))
-        print(f"{'号数':>5} {'直径mm':>7} {'尼龙kg':>7} {'PEkg':>6} {'碳素kg':>7}")
+        fno = lambda n: str(int(n)) if float(n).is_integer() else str(n)
+        print(f"{'号数':>5} {'直径mm':>7} {'尼龙kg':>7} {'碳素kg':>7} {'PEkg':>6}")
         for no in nos:
             br = lambda m: BREAK[m].get(no, "—")
-            print(f"{no:>5} {dia(no):>7.3f} {str(br('nylon')):>7} {str(br('pe')):>6} {str(br('carbon')):>7}")
+            print(f"{fno(no):>5} {dia(no):>7.3f} {str(br('nylon')):>7} {str(br('carbon')):>7} {str(br('pe')):>6}")
         print("注: 直径 d≈0.165√号（同号同径）；PE 同号拉力≈尼龙3-5倍；尼龙表较JAFS偏高约10-40%（品牌宣传值）")
     elif kind == "hook":
         print(f"{'钩型':<6} {'号数':<8} {'适用鱼':<22} 特点")
