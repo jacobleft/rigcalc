@@ -83,6 +83,7 @@
   <div class="tabs">
     <div class="tab active" id="tabFwd" onclick="showTab('fwd')">正向：目标鱼 → 配置</div>
     <div class="tab" id="tabRev" onclick="showTab('rev')">反向：给定配置 → 可钓鱼种</div>
+    <div class="tab" id="tabTbl" onclick="showTab('tbl')">速查表：线 / 钩 / 阿波</div>
   </div>
 
   <!-- ================= 正向 ================= -->
@@ -183,6 +184,27 @@
       <div class="panel">
         <h2>可钓鱼种（安全上限）</h2>
         <table class="rev-table" id="revTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 速查表 ================= -->
+  <div id="paneTbl" class="hide">
+    <div class="grid" style="grid-template-columns:1fr;">
+      <div class="panel">
+        <h2>鱼线速查（号数 → 直径 / 破断拉力 kg）</h2>
+        <table class="rev-table" id="tblLine"></table>
+        <div class="note">直径 d ≈ 0.165√号（JAFS 线号制：同号同径，PE/尼龙/碳素同号直径相同）；破断取主流品牌典型值，尼龙表较 JAFS 参考偏高约 10–40%（品牌宣传值）。<b>PE 同号拉力 ≈ 尼龙 3–5 倍</b>——「PE 号 = 2.5×尼龙号」是前导配比口诀（故意让前导偏弱当牺牲环节），不是物理换算。</div>
+      </div>
+      <div class="panel">
+        <h2>鱼钩速查（钩型 → 适用鱼）</h2>
+        <table class="rev-table" id="tblHook"></table>
+        <div class="note">经验式：钩号 = f(体重)，钩条粗度应 ≥ 线径（线定钩原则）。路亚无独立钩卡：钩型由拟饵决定（亮片三本钩、软饵曲柄钩）。</div>
+      </div>
+      <div class="panel">
+        <h2>阿波/咬铅速查（G · B · 号 → 配重克数）</h2>
+        <table class="rev-table" id="tblAwa"></table>
+        <div class="note">号数 = 下方「水中+咬铅」总配重额度（浮力当量）：选号按流速，配重总额 ≈ 该号克数。号数制 1号 ≈ 3.75g（オモリ号数制：号×3.75g）。数据多源交叉核验（ガン玉重量表），各品牌实测有 ±0.05g 出入，以包装标注为准。</div>
       </div>
     </div>
   </div>
@@ -408,12 +430,84 @@ const RIGDATA = {
     "lusu": "路滑",
     "lure": "路亚",
     "sea": "海钓"
+  },
+  "HOOKS": [
+    {
+      "type": "袖钩",
+      "sizes": "1–6",
+      "target": "白条/鲫鱼/罗非仔（小型淡水）",
+      "note": "钩条细、刺鱼快，小鱼首选；强度低，大物易拉直"
+    },
+    {
+      "type": "伊豆",
+      "sizes": "3–6",
+      "target": "鲫鱼/罗非（中型淡水）",
+      "note": "钩尖歪嘴、中鱼率高，台钓泛用"
+    },
+    {
+      "type": "伊势尼",
+      "sizes": "3–8",
+      "target": "鲤鱼/罗非/鲮鱼/草鱼",
+      "note": "钩条粗、大物守钓；粗条需匹配粗线"
+    },
+    {
+      "type": "新关东",
+      "sizes": "0.5–3",
+      "target": "罗非/鲤鱼",
+      "note": "无倒刺、快摘钩，竞技/黑坑向"
+    },
+    {
+      "type": "千又",
+      "sizes": "1–7",
+      "target": "海鱼（黑鲷/海鲈/黄脚鱲）",
+      "note": "钩条粗、歪嘴防脱，海钓泛用"
+    },
+    {
+      "type": "丸世",
+      "sizes": "3–8",
+      "target": "海鱼中小型/沙尖",
+      "note": "钩门宽，挂虫饵/虾肉稳"
+    },
+    {
+      "type": "チヌ钩",
+      "sizes": "2–3",
+      "target": "黑鲷（矶钓）",
+      "note": "高强度短轴，矶钓黑鲷标配"
+    },
+    {
+      "type": "曲柄钩",
+      "sizes": "2/0–4",
+      "target": "路亚软饵（鲈鱼/鳜鱼）",
+      "note": "德州/倒钓用，钩尖藏饵防挂底"
+    }
+  ],
+  "AWA": {
+    "G8": 0.07,
+    "G7": 0.09,
+    "G6": 0.12,
+    "G5": 0.16,
+    "G4": 0.2,
+    "G3": 0.25,
+    "G2": 0.31,
+    "G1": 0.4,
+    "B": 0.55,
+    "2B": 0.75,
+    "3B": 0.95,
+    "4B": 1.2,
+    "5B": 1.85,
+    "6B": 2.65,
+    "0.5号": 1.85,
+    "0.8号": 3.0,
+    "1号": 3.75,
+    "1.5号": 5.6,
+    "2号": 7.5
   }
 };
 /*__RIGDATA_END__*/
 // 数据从 RIGDATA 解构（data.json → build.py → 内联于此）
 const FISH = RIGDATA.FISH, BREAK = RIGDATA.BREAK, LINE_ORDER = RIGDATA.LINE_ORDER;
 const REEL = RIGDATA.REEL, DIA_1 = RIGDATA.DIA_1, REV_ENV_FACTOR = RIGDATA.REV_ENV_FACTOR, MODES = RIGDATA.MODES;
+const HOOKS = RIGDATA.HOOKS, AWA = RIGDATA.AWA;
 
 // ---------------- 主题切换 ----------------
 function syncThemeBtn(){
@@ -707,14 +801,43 @@ function buildFishSelect(){
 function showTab(t){
   $("paneFwd").classList.toggle("hide", t!=="fwd");
   $("paneRev").classList.toggle("hide", t!=="rev");
+  $("paneTbl").classList.toggle("hide", t!=="tbl");
   $("tabFwd").classList.toggle("active", t==="fwd");
   $("tabRev").classList.toggle("active", t==="rev");
-  if(t==="rev") rev(); else calc();
+  $("tabTbl").classList.toggle("active", t==="tbl");
+  if(t==="rev") rev(); else if(t==="fwd") calc();
+}
+
+// ---------------- 速查表渲染 ----------------
+function fmtBreak(mat, no){ const b = BREAK[mat] && BREAK[mat][no]; return b==null ? "—" : b + " kg"; }
+function buildTables(){
+  // 鱼线：三材质号数并集升序
+  const nos = [...new Set([...LINE_ORDER.nylon, ...LINE_ORDER.pe, ...LINE_ORDER.carbon])]
+    .map(Number).sort((a,b)=>a-b).map(String);
+  let h = `<tr><th>号数</th><th>直径 mm</th><th>尼龙</th><th>PE</th><th>碳素</th></tr>`;
+  nos.forEach(no=>{
+    const d = (DIA_1*Math.sqrt(parseFloat(no))).toFixed(3);
+    h += `<tr><td><b>${no} 号</b></td><td>${d}</td><td>${fmtBreak("nylon",no)}</td><td>${fmtBreak("pe",no)}</td><td>${fmtBreak("carbon",no)}</td></tr>`;
+  });
+  $("tblLine").innerHTML = h;
+  // 鱼钩
+  h = `<tr><th>钩型</th><th>号数范围</th><th>适用鱼</th><th>特点</th></tr>`;
+  HOOKS.forEach(o=>{ h += `<tr><td><b>${o.type}</b></td><td>${o.sizes}</td><td>${o.target}</td><td style="font-size:12px;color:var(--muted)">${o.note}</td></tr>`; });
+  $("tblHook").innerHTML = h;
+  // 阿波：按克数升序，标注系列
+  h = `<tr><th>标记</th><th>配重克数</th><th>系列</th><th>典型场景</th></tr>`;
+  Object.entries(AWA).sort((a,b)=>a[1]-b[1]).forEach(([mark, g])=>{
+    const series = /^G/.test(mark) ? "G 系" : /B$/.test(mark) ? "B 系" : "号数制";
+    const scene = g<0.3 ? "轻口微配重" : g<0.7 ? "轻量精细（近岸浅场）" : g<1.3 ? "浅场缓流（防波堤内）" : g<2.0 ? "中流（防波堤外）" : "起流/深场";
+    h += `<tr><td><b>${mark}</b></td><td>${g} g</td><td>${series}</td><td style="font-size:12px;color:var(--muted)">${scene}</td></tr>`;
+  });
+  $("tblAwa").innerHTML = h;
 }
 // 填充鱼种下拉
 (function(){
   syncThemeBtn();
   buildFishSelect();
+  buildTables();
   // 隐藏的摘要文本节点
   const sp=document.createElement("span"); sp.id="sumText"; sp.style.display="none"; document.body.appendChild(sp);
   calc();

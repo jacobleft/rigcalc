@@ -37,6 +37,8 @@ REEL = DATA["REEL"]
 DIA_1 = DATA["DIA_1"]
 REV_ENV_FACTOR = DATA["REV_ENV_FACTOR"]
 MODES = DATA["MODES"]
+HOOKS = DATA.get("HOOKS", [])
+AWA = DATA.get("AWA", {})
 FISH_NAMES = [f["name"] for f in FISH]
 
 # ---------------- 工具 ----------------
@@ -60,6 +62,29 @@ def pick_reel(Lm, d):
         if cap >= req and (best is None or cap < REEL[best]):
             best = t
     return (best if best else 6000), round(req), best is None
+
+# ---------------- 速查表 ----------------
+def print_table(kind):
+    if kind == "line":
+        nos = sorted(set(LINE_ORDER["nylon"]) | set(LINE_ORDER["pe"]) | set(LINE_ORDER["carbon"]))
+        print(f"{'号数':>5} {'直径mm':>7} {'尼龙kg':>7} {'PEkg':>6} {'碳素kg':>7}")
+        for no in nos:
+            br = lambda m: BREAK[m].get(no, "—")
+            print(f"{no:>5} {dia(no):>7.3f} {str(br('nylon')):>7} {str(br('pe')):>6} {str(br('carbon')):>7}")
+        print("注: 直径 d≈0.165√号（同号同径）；PE 同号拉力≈尼龙3-5倍；尼龙表较JAFS偏高约10-40%（品牌宣传值）")
+    elif kind == "hook":
+        print(f"{'钩型':<6} {'号数':<8} {'适用鱼':<22} 特点")
+        for o in HOOKS:
+            print(f"{o['type']:<6} {o['sizes']:<8} {o['target']:<22} {o['note']}")
+    elif kind == "awa":
+        print(f"{'标记':<6} {'配重g':>6} 系列 / 典型场景")
+        for mark, g in sorted(AWA.items(), key=lambda kv: kv[1]):
+            series = "G系" if mark.startswith("G") else ("B系" if mark.endswith("B") else "号数制")
+            scene = ("轻口微配重" if g < 0.3 else "轻量精细/近岸浅场" if g < 0.7 else
+                     "浅场缓流/防波堤内" if g < 1.3 else "中流/防波堤外" if g < 2.0 else "起流/深场")
+            print(f"{mark:<6} {g:>6} {series} / {scene}")
+        print("注: 号数=下方水中+咬铅总配重额度(浮力当量)；1号≈3.75g（号×3.75g）；各品牌实测±0.05g")
+    return 0
 
 # ---------------- 正向 ----------------
 def select_main(mode, mat, T_need, lure_w):
@@ -229,10 +254,14 @@ def main():
     ap.add_argument("--line", type=float, default=1.5, help="反向: 主线号数")
     ap.add_argument("--env", type=int, choices=[0,1,2], default=0, help="反向: 0静水 1江河 2海钓")
     ap.add_argument("--selftest", action="store_true", help="往返一致性自测（正向选线→反向反解应能覆盖原体重）")
+    ap.add_argument("--table", choices=["line","hook","awa"], help="速查表: line=鱼线 hook=鱼钩 awa=阿波配重")
     args = ap.parse_args()
 
     if args.selftest:
         sys.exit(selftest())
+
+    if args.table:
+        sys.exit(print_table(args.table))
 
     if args.reverse:
         no, T, rows = calc_reverse(args.mat, args.line, args.env)
