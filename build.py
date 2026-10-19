@@ -32,7 +32,7 @@ XREF_BOUNDS = [3.2, 3.8, 4.45, 5.15, 5.95, 6.9, 7.8]       # 相邻中心的中�
 
 
 def gen_hook_xref(hook_dims):
-    """从 HOOK_DIMS 聚类生成互换表：每档内每钩型取距档位中心最近的号数。"""
+    """从 HOOK_DIMS 聚类生成互换表：同档同型的多个号全部保留（斜杠分隔），避免常用号被吞。"""
     def band(g):
         for i, b in enumerate(XREF_BOUNDS):
             if g < b:
@@ -43,11 +43,7 @@ def gen_hook_xref(hook_dims):
     for t, sizes in hook_dims.items():
         for no, dims in sizes.items():
             g = dims[1]
-            bi = band(g)
-            cand = (abs(g - XREF_CENTERS[bi]), no, g)
-            cur = slots.setdefault(bi, {}).setdefault(t)
-            if cur is None or cand < cur:
-                slots[bi][t] = cand
+            slots.setdefault(band(g), {}).setdefault(t, []).append((float(no), no, g))
 
     types = list(hook_dims.keys())
     rows = []
@@ -55,10 +51,11 @@ def gen_hook_xref(hook_dims):
         row = {}
         gaps = []
         for t in types:
-            c = slots[bi].get(t)
-            if c:
-                row[t] = c[1]
-                gaps.append(c[2])
+            cands = slots[bi].get(t)
+            if cands:
+                cands.sort()
+                row[t] = "/".join(no for _, no, _ in cands)
+                gaps.extend(g for _, _, g in cands)
             else:
                 row[t] = "—"
         row = {"gap": f"{min(gaps):.1f}–{max(gaps):.1f}", **{t: row[t] for t in types}}
