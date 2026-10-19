@@ -812,9 +812,9 @@ function showTab(t){
 function fmtBreak(mat, no){ const b = BREAK[mat] && BREAK[mat][no]; return b==null ? "—" : b + " kg"; }
 function fmtNo(no){ const n = parseFloat(no); return Number.isInteger(n) ? String(n) : no; }
 function buildTables(){
-  // 鱼线：三材质号数并集升序
+  // 鱼线：三材质号数并集升序（保留原始字符串键——整数号 "1.0" 不能 Number→String 往返，否则键变 "1" 查不到 BREAK 表）
   const nos = [...new Set([...LINE_ORDER.nylon, ...LINE_ORDER.pe, ...LINE_ORDER.carbon])]
-    .map(Number).sort((a,b)=>a-b).map(String);
+    .sort((a,b)=>parseFloat(a)-parseFloat(b));
   let h = `<tr><th>号数</th><th>直径 mm</th><th>尼龙</th><th>碳素</th><th>PE</th></tr>`;
   nos.forEach(no=>{
     const d = (DIA_1*Math.sqrt(parseFloat(no))).toFixed(3);
