@@ -198,12 +198,12 @@
       </div>
       <div class="panel">
         <h2>鱼钩速查</h2>
-        <div class="note" style="margin-top:0"><b>钩号没有统一标准</b>——同号不同型尺寸差异巨大（如 1号：伊势尼钩门 3.9mm vs 袖钩 2.7mm）。互换表由下方明细数据按钩门宽聚类生成（非网传表），每行首列即该档实际钩门宽。</div>
-        <h2 style="margin-top:14px">同尺寸钩型互换（一行 = 同等大小）</h2>
+        <div class="note" style="margin-top:0"><b>钩号没有统一标准</b>——同号不同型尺寸差异巨大（如 1号：伊势尼钩门 3.9mm vs 袖钩 2.7mm），选钩只能按实际尺寸。下表把全部钩型按钩门宽升序排列（钩门宽是连续谱，无自然分组，故不分档、只按整数毫米分段）。</div>
+        <h2 style="margin-top:14px">全钩型 × 钩门宽排序表</h2>
         <table class="rev-table" id="tblHookXref"></table>
         <h2 style="margin-top:14px">钩型尺寸明细 <select id="hookType" onchange="buildHookDim()" style="width:auto;display:inline-block;margin-left:8px"></select></h2>
         <table class="rev-table" id="tblHookDim"></table>
-        <div class="note">列：钩身长 / 钩门宽 / 钩条径 mm + 拉力 kg（典型值）。<b>数据多源交叉核验</b>（袖钩：百度百科/鱼乐之家；伊势尼、伊豆：双源一致），各品牌实测有 ±5–10% 出入，以实物为准。</div>
+        <div class="note">列：钩门宽 / 钩身长 / 钩条径 mm + 拉力 kg（典型值）。<b>数据多源交叉核验</b>（袖钩：百度百科/鱼乐之家；伊势尼、伊豆：双源一致），各品牌实测有 ±5–10% 出入，以实物为准。</div>
       </div>
       <div class="panel">
         <h2>阿波/咬铅速查（G · B · 号 → 配重克数）</h2>
@@ -477,96 +477,6 @@ const RIGDATA = {
       "sizes": "2/0–4",
       "target": "路亚软饵（鲈鱼/鳜鱼）",
       "note": "德州/倒钓用，钩尖藏饵防挂底"
-    }
-  ],
-  "HOOK_XREF": [
-    {
-      "gap": "2.7–3.1",
-      "袖钩": "1",
-      "伊势尼": "—",
-      "伊豆": "1",
-      "新关东": "—",
-      "海夕": "—",
-      "溪流": "1",
-      "丸世": "1/2",
-      "千又": "—"
-    },
-    {
-      "gap": "3.2–3.6",
-      "袖钩": "2/3",
-      "伊势尼": "—",
-      "伊豆": "2/3",
-      "新关东": "—",
-      "海夕": "—",
-      "溪流": "2/3",
-      "丸世": "3/4",
-      "千又": "—"
-    },
-    {
-      "gap": "3.9–4.4",
-      "袖钩": "4/5",
-      "伊势尼": "1/2",
-      "伊豆": "4/5",
-      "新关东": "0.1",
-      "海夕": "1",
-      "溪流": "4",
-      "丸世": "5/6",
-      "千又": "0.1/0.3"
-    },
-    {
-      "gap": "4.5–5.1",
-      "袖钩": "6/7/8",
-      "伊势尼": "3",
-      "伊豆": "6",
-      "新关东": "0.3/0.5",
-      "海夕": "2/3",
-      "溪流": "5",
-      "丸世": "7/8",
-      "千又": "—"
-    },
-    {
-      "gap": "5.2–5.9",
-      "袖钩": "—",
-      "伊势尼": "4/5/6",
-      "伊豆": "7/8",
-      "新关东": "0.8/1",
-      "海夕": "4/5",
-      "溪流": "6/7",
-      "丸世": "9/10",
-      "千又": "0.8/1"
-    },
-    {
-      "gap": "6.1–6.8",
-      "袖钩": "—",
-      "伊势尼": "7",
-      "伊豆": "9/10",
-      "新关东": "2",
-      "海夕": "6/7/8",
-      "溪流": "8",
-      "丸世": "—",
-      "千又": "2/3"
-    },
-    {
-      "gap": "6.9–7.3",
-      "袖钩": "—",
-      "伊势尼": "8/9",
-      "伊豆": "—",
-      "新关东": "3",
-      "海夕": "—",
-      "溪流": "—",
-      "丸世": "—",
-      "千又": "—"
-    },
-    {
-      "gap": "7.8–8.3",
-      "袖钩": "—",
-      "伊势尼": "10",
-      "伊豆": "—",
-      "新关东": "4/5",
-      "海夕": "—",
-      "溪流": "—",
-      "丸世": "—",
-      "千又": "4"
     }
   ],
   "HOOK_DIMS": {
@@ -1033,7 +943,7 @@ const RIGDATA = {
 // 数据从 RIGDATA 解构（data.json → build.py → 内联于此）
 const FISH = RIGDATA.FISH, BREAK = RIGDATA.BREAK, LINE_ORDER = RIGDATA.LINE_ORDER;
 const REEL = RIGDATA.REEL, DIA_1 = RIGDATA.DIA_1, REV_ENV_FACTOR = RIGDATA.REV_ENV_FACTOR, MODES = RIGDATA.MODES;
-const HOOKS = RIGDATA.HOOKS, AWA = RIGDATA.AWA, HOOK_XREF = RIGDATA.HOOK_XREF, HOOK_DIMS = RIGDATA.HOOK_DIMS;
+const HOOKS = RIGDATA.HOOKS, AWA = RIGDATA.AWA, HOOK_DIMS = RIGDATA.HOOK_DIMS;
 
 // ---------------- 主题切换 ----------------
 function syncThemeBtn(){
@@ -1357,10 +1267,24 @@ function buildTables(){
     h += `<tr><td><b>${fmtNo(no)} 号</b></td><td>${d}</td><td>${fmtBreak("nylon",no)}</td><td>${fmtBreak("carbon",no)}</td><td>${fmtBreak("pe",no)}</td></tr>`;
   });
   $("tblLine").innerHTML = h;
-  // 鱼钩：互换表（首列钩门宽 mm，由 HOOK_DIMS 聚类生成）+ 明细
-  const hookTypes = Object.keys(HOOK_XREF[0]).filter(k=>k!=="gap");
-  let hx = `<tr><th>钩门宽 mm</th>${hookTypes.map(t=>`<th>${t}</th>`).join("")}</tr>`;
-  HOOK_XREF.forEach(row=>{ hx += `<tr><td><b>${row.gap}</b></td>${hookTypes.map(t=>`<td>${row[t]}</td>`).join("")}</tr>`; });
+  // 鱼钩：全钩型按钩门宽排序流水表（无分档——钩门宽是连续谱），按整数毫米分段
+  const hookRows = [];
+  Object.entries(HOOK_DIMS).forEach(([t, sizes])=>{
+    Object.entries(sizes).forEach(([no, d])=>{
+      hookRows.push({t, no, gap: d[1], len: d[0], wire: d[2], pull: d[3]});
+    });
+  });
+  hookRows.sort((a,b)=> a.gap - b.gap || a.t.localeCompare(b.t, "zh") || parseFloat(a.no)-parseFloat(b.no));
+  let hx = `<tr><th>钩门宽 mm</th><th>钩型</th><th>号数</th><th>钩身长 mm</th><th>钩条径 mm</th><th>拉力 kg</th></tr>`;
+  let curBand = -1;
+  hookRows.forEach(r=>{
+    const b = Math.floor(r.gap);
+    if(b !== curBand){
+      curBand = b;
+      hx += `<tr><td colspan="6" style="background:rgba(128,128,128,.12);font-weight:700;text-align:left">钩门宽 ${b}–${b+1} mm</td></tr>`;
+    }
+    hx += `<tr><td><b>${r.gap}</b></td><td>${r.t}</td><td>${fmtNo(r.no)} 号</td><td>${r.len}</td><td>${r.wire}</td><td>${r.pull}</td></tr>`;
+  });
   $("tblHookXref").innerHTML = hx;
   // 明细：钩型下拉
   const sel = $("hookType");
