@@ -1272,23 +1272,23 @@ function buildTables(){
     const da = HOOK_DIMS[a]["1"], db = HOOK_DIMS[b]["1"];
     return (da[1]-db[1]) || (da[0]-db[0]);
   });
-  // 鱼钩：全钩型按钩门宽排序流水表（无分档——钩门宽是连续谱），按整数毫米分段
-  const hookRows = [];
+  // 鱼钩矩阵：纵轴=钩门宽（0.1mm 实际值去重排序），横轴=钩型，格=号数
+  // 每值一行、每格一号——边界就是数据本身，无拍脑袋分档
+  const gapVals = [...new Set(Object.values(HOOK_DIMS).flatMap(sizes=>Object.values(sizes).map(d=>d[1])))].sort((a,b)=>a-b);
+  const lookup = {};  // gap -> {type: no}
   Object.entries(HOOK_DIMS).forEach(([t, sizes])=>{
-    Object.entries(sizes).forEach(([no, d])=>{
-      hookRows.push({t, no, gap: d[1], len: d[0], wire: d[2], pull: d[3]});
-    });
+    Object.entries(sizes).forEach(([no, d])=>{ (lookup[d[1]] = lookup[d[1]] || {})[t] = no; });
   });
-  hookRows.sort((a,b)=> a.gap - b.gap || hookOrder.indexOf(a.t)-hookOrder.indexOf(b.t) || parseFloat(a.no)-parseFloat(b.no));
-  let hx = `<tr><th>钩门宽 mm</th><th>钩型</th><th>号数</th><th>钩身长 mm</th><th>钩条径 mm</th><th>拉力 kg</th></tr>`;
+  let hx = `<tr><th>钩门宽 mm</th>${hookOrder.map(t=>`<th>${t}</th>`).join("")}</tr>`;
   let curBand = -1;
-  hookRows.forEach(r=>{
-    const b = Math.floor(r.gap);
-    if(b !== curBand){
-      curBand = b;
-      hx += `<tr><td colspan="6" style="background:rgba(128,128,128,.12);font-weight:700;text-align:left">钩门宽 ${b}–${b+1} mm</td></tr>`;
-    }
-    hx += `<tr><td><b>${r.gap}</b></td><td>${r.t}</td><td>${fmtNo(r.no)} 号</td><td>${r.len}</td><td>${r.wire}</td><td>${r.pull}</td></tr>`;
+  gapVals.forEach(g=>{
+    const b = Math.floor(g);
+    const sep = b !== curBand ? ` style="border-top:2px solid var(--muted)"` : ``;
+    curBand = b;
+    hx += `<tr${sep}><td><b>${g.toFixed(1)}</b></td>${hookOrder.map(t=>{
+      const no = lookup[g][t];
+      return `<td>${no ? fmtNo(no) : ""}</td>`;
+    }).join("")}</tr>`;
   });
   $("tblHookXref").innerHTML = hx;
   // 明细：钩型下拉（按 1 号大小排序）

@@ -77,24 +77,25 @@ def print_table(kind):
     elif kind == "hook":
         # 钩型顺序：按各型 1 号钩门宽升序（tiebreak 钩身长）
         hook_order = sorted(HOOK_DIMS.keys(), key=lambda t: (HOOK_DIMS[t]["1"][1], HOOK_DIMS[t]["1"][0]))
-        order_idx = {t: i for i, t in enumerate(hook_order)}
-        # 全钩型按钩门宽排序流水表（无分档——钩门宽是连续谱），按整数毫米分段
-        rows = []
+        # 矩阵：纵轴=钩门宽（0.1mm 实际值去重），横轴=钩型，格=号数
+        gap_vals = sorted({d[1] for sizes in HOOK_DIMS.values() for d in sizes.values()})
+        lookup = {}
         for t, sizes in HOOK_DIMS.items():
             for no, (L, g, w, pull) in sizes.items():
-                rows.append((g, t, float(no), no, L, w, pull))
-        rows.sort(key=lambda r: (r[0], order_idx.get(r[1], 99), r[2]))
-        print("全钩型按钩门宽排序（钩门宽mm | 钩型 号数 | 钩身长 | 钩条径 | 拉力kg）：")
+                fno = str(int(float(no))) if float(no).is_integer() else no
+                lookup.setdefault(g, {})[t] = fno
+        print("钩门宽mm | " + "  ".join(f"{t:<4}" for t in hook_order))
         cur = None
-        for g, t, _, no, L, w, pull in rows:
+        for g in gap_vals:
             b = int(g)
             if b != cur:
+                if cur is not None:
+                    print("  " + "-" * (8 + 6 * len(hook_order)))
                 cur = b
-                print(f"── 钩门宽 {b}–{b+1} mm ──")
-            fno = str(int(float(no))) if float(no).is_integer() else no
-            print(f"  {g:>4}  {t}{fno}号  {L}mm / {w}mm / {pull}kg")
+            cells = "  ".join(f"{lookup[g].get(t, ''):<4}" for t in hook_order)
+            print(f"  {g:>4}   {cells}")
         print()
-        print("注: 钩号无统一标准，同号不同型尺寸差异大（1号: 伊势尼钩门3.9mm vs 袖钩2.7mm）；数据多源交叉核验，品牌间±5-10%出入")
+        print("注: 纵轴=实际钩门宽值（每值一行、每格一号）；钩号无统一标准，同号不同型尺寸差异大；数据多源交叉核验，品牌间±5-10%出入")
     elif kind == "awa":
         print(f"{'标记':<6} {'配重g':>6} 系列 / 典型场景")
         for mark, g in sorted(AWA.items(), key=lambda kv: kv[1]):
