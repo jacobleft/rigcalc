@@ -1267,6 +1267,11 @@ function buildTables(){
     h += `<tr><td><b>${fmtNo(no)} 号</b></td><td>${d}</td><td>${fmtBreak("nylon",no)}</td><td>${fmtBreak("carbon",no)}</td><td>${fmtBreak("pe",no)}</td></tr>`;
   });
   $("tblLine").innerHTML = h;
+  // 钩型顺序：按各型 1 号钩门宽升序（tiebreak 钩身长）——反映「同号不同型」的真实大小关系
+  const hookOrder = Object.keys(HOOK_DIMS).sort((a,b)=>{
+    const da = HOOK_DIMS[a]["1"], db = HOOK_DIMS[b]["1"];
+    return (da[1]-db[1]) || (da[0]-db[0]);
+  });
   // 鱼钩：全钩型按钩门宽排序流水表（无分档——钩门宽是连续谱），按整数毫米分段
   const hookRows = [];
   Object.entries(HOOK_DIMS).forEach(([t, sizes])=>{
@@ -1274,7 +1279,7 @@ function buildTables(){
       hookRows.push({t, no, gap: d[1], len: d[0], wire: d[2], pull: d[3]});
     });
   });
-  hookRows.sort((a,b)=> a.gap - b.gap || a.t.localeCompare(b.t, "zh") || parseFloat(a.no)-parseFloat(b.no));
+  hookRows.sort((a,b)=> a.gap - b.gap || hookOrder.indexOf(a.t)-hookOrder.indexOf(b.t) || parseFloat(a.no)-parseFloat(b.no));
   let hx = `<tr><th>钩门宽 mm</th><th>钩型</th><th>号数</th><th>钩身长 mm</th><th>钩条径 mm</th><th>拉力 kg</th></tr>`;
   let curBand = -1;
   hookRows.forEach(r=>{
@@ -1286,10 +1291,10 @@ function buildTables(){
     hx += `<tr><td><b>${r.gap}</b></td><td>${r.t}</td><td>${fmtNo(r.no)} 号</td><td>${r.len}</td><td>${r.wire}</td><td>${r.pull}</td></tr>`;
   });
   $("tblHookXref").innerHTML = hx;
-  // 明细：钩型下拉
+  // 明细：钩型下拉（按 1 号大小排序）
   const sel = $("hookType");
   sel.innerHTML = "";
-  Object.keys(HOOK_DIMS).forEach(t=>{ const o=document.createElement("option"); o.value=t; o.textContent=t; sel.appendChild(o); });
+  hookOrder.forEach(t=>{ const o=document.createElement("option"); o.value=t; o.textContent=t; sel.appendChild(o); });
   sel.value = "袖钩";
   buildHookDim();
   // 阿波：按克数升序，标注系列

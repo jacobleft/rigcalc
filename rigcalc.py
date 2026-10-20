@@ -75,12 +75,15 @@ def print_table(kind):
             print(f"{fno(no):>5} {dia(no):>7.3f} {str(br('nylon')):>7} {str(br('carbon')):>7} {str(br('pe')):>6}")
         print("注: 直径 d≈0.165√号（同号同径）；PE 同号拉力≈尼龙3-5倍；尼龙表较JAFS偏高约10-40%（品牌宣传值）")
     elif kind == "hook":
+        # 钩型顺序：按各型 1 号钩门宽升序（tiebreak 钩身长）
+        hook_order = sorted(HOOK_DIMS.keys(), key=lambda t: (HOOK_DIMS[t]["1"][1], HOOK_DIMS[t]["1"][0]))
+        order_idx = {t: i for i, t in enumerate(hook_order)}
         # 全钩型按钩门宽排序流水表（无分档——钩门宽是连续谱），按整数毫米分段
         rows = []
         for t, sizes in HOOK_DIMS.items():
             for no, (L, g, w, pull) in sizes.items():
                 rows.append((g, t, float(no), no, L, w, pull))
-        rows.sort(key=lambda r: (r[0], r[1], r[2]))
+        rows.sort(key=lambda r: (r[0], order_idx.get(r[1], 99), r[2]))
         print("全钩型按钩门宽排序（钩门宽mm | 钩型 号数 | 钩身长 | 钩条径 | 拉力kg）：")
         cur = None
         for g, t, _, no, L, w, pull in rows:
