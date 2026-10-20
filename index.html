@@ -203,7 +203,7 @@
         <table class="rev-table" id="tblHookXref"></table>
         <h2 style="margin-top:14px">钩型尺寸明细 <select id="hookType" onchange="buildHookDim()" style="width:auto;display:inline-block;margin-left:8px"></select></h2>
         <table class="rev-table" id="tblHookDim"></table>
-        <div class="note">列：钩门宽 / 钩身长 / 钩条径 mm + 拉力 kg（典型值）。<b>数据多源交叉核验</b>（袖钩：百度百科/鱼乐之家；伊势尼、伊豆：双源一致），各品牌实测有 ±5–10% 出入，以实物为准。</div>
+        <div class="note">列：钩门宽 / 钩身长 / 钩条径 mm + 拉力 kg（典型值）。<b>数据多源交叉核验</b>（袖钩：百度百科/鱼乐之家/酷钓鱼；0.1、0.5 号袖钩有实测：酷钓鱼主表+多站专文），各品牌实测有 ±5–10% 出入，以实物为准。<b>袖钩 0.3 / 0.8 / 1.2 / 1.5 号属厂牌非标号，全网无公开标准尺寸，故不列出</b>（买时以商品页实测为准）。</div>
       </div>
       <div class="panel">
         <h2>阿波/咬铅速查（G · B · 号 → 配重克数）</h2>
@@ -438,9 +438,9 @@ const RIGDATA = {
   "HOOKS": [
     {
       "type": "袖钩",
-      "sizes": "1–6",
+      "sizes": "0.1–8",
       "target": "白条/鲫鱼/罗非仔（小型淡水）",
-      "note": "钩条细、刺鱼快，小鱼首选；强度低，大物易拉直"
+      "note": "钩条细、刺鱼快，小鱼首选；强度低。0.1/0.5号有实测数据（多源）；0.3/0.8/1.5等中间号为厂牌非标，无公开标准尺寸"
     },
     {
       "type": "伊豆",
@@ -481,6 +481,18 @@ const RIGDATA = {
   ],
   "HOOK_DIMS": {
     "袖钩": {
+      "0.1": [
+        5.4,
+        1.9,
+        0.18,
+        "0.6–0.9"
+      ],
+      "0.5": [
+        6.1,
+        2.4,
+        0.2,
+        "0.8–1.0"
+      ],
       "1": [
         6.5,
         2.7,
